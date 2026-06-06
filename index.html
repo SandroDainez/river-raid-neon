@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>River Raid - Neon Edition</title>
+    <meta name="description" content="Um clone moderno e estiloso do clássico River Raid do Atari com temática Neon, Vaporwave e trilha sonora sintetizada em tempo real.">
+    <link rel="stylesheet" href="styles.css?v=6">
+</head>
+<body>
+
+    <main class="arcade-container" id="arcadeCabinet">
+        
+        <!-- Left Sideboard: Cyber-Cockpit Diagnostics -->
+        <aside class="dashboard-panel cockpit-left" aria-label="Diagnóstico do Caça">
+            <div class="panel-decor-top"></div>
+            <h2 class="panel-title">HOLO-HUD V1.0</h2>
+            
+            <div class="monitor-screen">
+                <div class="stat-box">
+                    <span class="stat-label">PONTUAÇÃO</span>
+                    <div class="stat-value neon-glow-pink" id="currentScore">00000</div>
+                </div>
+                
+                <div class="stat-box">
+                    <span class="stat-label">RECORDE MAX</span>
+                    <div class="stat-value neon-glow-cyan" id="highScore">00000</div>
+                </div>
+
+                <div class="stat-box">
+                    <span class="stat-label">SETOR ATUAL</span>
+                    <div class="stat-value" id="currentLevel">01</div>
+                </div>
+            </div>
+
+            <!-- Subsystems status panel -->
+            <div class="subsystems-panel">
+                <span class="stat-label">STATUS DO CAÇA</span>
+                <div class="subsystem-row">
+                    <span>PROPULSÃO</span>
+                    <div class="hud-led active" id="propulsionLed"></div>
+                </div>
+                <div class="subsystem-row">
+                    <span>ARMAMENTO</span>
+                    <div class="hud-led active" id="laserLed"></div>
+                </div>
+                <div class="subsystem-row">
+                    <span>ESCUDO CORE</span>
+                    <div class="hud-led active" id="shieldLed"></div>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <span class="stat-label">VIDAS RESTANTES</span>
+                <div class="lives-container" id="livesContainer" aria-live="polite">
+                    <!-- SVG Lives Icons rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Fuel reactor gauge -->
+            <div class="fuel-wrapper cockpit-module">
+                <span class="stat-label">REACTOR CELL (COMB.)</span>
+                <div class="fuel-gauge" id="fuelGauge" aria-label="Nível de combustível">
+                    <div class="fuel-fill" id="fuelFill"></div>
+                    <div class="fuel-grid-overlay"></div>
+                </div>
+                <div class="fuel-labels">
+                    <span>E (0%)</span>
+                    <span>1/2</span>
+                    <span>F (100%)</span>
+                </div>
+                <div class="blinking-warning" id="fuelWarning">
+                    ! EMISSÃO CRÍTICA DE COMBUSTÍVEL !
+                </div>
+            </div>
+            <div class="panel-decor-bottom"></div>
+        </aside>
+
+        <!-- Center: Holographic Game Screen Container -->
+        <section class="game-cabinet" aria-label="Tela do Jogo">
+            <!-- Canvas -->
+            <canvas id="gameCanvas" width="600" height="800"></canvas>
+
+            <!-- CRT scanline overlay -->
+            <div class="crt-effect" id="crtOverlay"></div>
+
+            <!-- Overlays -->
+            
+            <!-- 1. Start Attract Screen with 3D perspective grids -->
+            <div class="overlay-screen active" id="startScreen">
+                <div class="perspective-grid-container">
+                    <div class="perspective-grid"></div>
+                </div>
+                
+                <h1 class="overlay-title">RIVER RAID<br><span class="cyan-neon-text">NEON VOYAGE</span></h1>
+                
+                <!-- Premium cover banner -->
+                <img src="images/game_banner.png" class="menu-banner" alt="River Raid Cover Art">
+
+                <p class="overlay-subtitle">Pilote seu caça a jato pelo rio neon, destrua defesas inimigas e reabasteça nos canais de energia!</p>
+                
+                <button class="menu-btn neon-pulse-pink" id="startGameBtn">INICIAR OPERAÇÃO (ENTER)</button>
+                
+                <div class="difficulty-section">
+                    <span class="setting-label" style="text-align: center; margin-bottom: 8px;">DIFICULDADE DE VOO</span>
+                    <div class="difficulty-selector" id="difficultyGroup">
+                        <button class="diff-btn active" data-value="1">NORMAL</button>
+                        <button class="diff-btn" data-value="2">DIFÍCIL</button>
+                        <button class="diff-btn" data-value="3">INSANO</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Game Over Screen -->
+            <div class="overlay-screen" id="gameOverScreen">
+                <h2 class="overlay-title glitch-text" style="color: var(--border-glow-pink);">MISSÃO FRACASSADA</h2>
+                
+                <div class="stat-box" style="margin-bottom: 25px;">
+                    <span class="stat-label">DADOS DE ENERGIA OBTIDOS</span>
+                    <div class="stat-value neon-glow-pink" id="finalScore" style="font-size: 2.4rem;">0</div>
+                </div>
+
+                <!-- High score input form -->
+                <div id="highScoreForm" style="display: none; margin-bottom: 25px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; border: 1px solid var(--border-glow-cyan);">
+                    <p style="margin-bottom: 12px; color: var(--border-glow-cyan); font-size: 0.75rem; font-family: var(--retro-font);">NOVO RECORDISTA DETECTADO!</p>
+                    <input type="text" id="playerNameInput" maxlength="10" placeholder="PILOTO" style="font-family: var(--retro-font); font-size: 0.8rem; background: rgba(22,10,45,0.7); border: 2px solid var(--border-glow-cyan); border-radius: 4px; color: white; padding: 8px; text-align: center; text-transform: uppercase; outline: none; width: 180px; letter-spacing: 2px;">
+                    <button class="menu-btn secondary" id="submitScoreBtn" style="margin-top: 12px; padding: 8px 20px; font-size: 0.7rem;">REGISTRAR</button>
+                </div>
+
+                <button class="menu-btn" id="restartGameBtn">REINICIAR VOO</button>
+            </div>
+
+            <!-- 3. Pause Screen -->
+            <div class="overlay-screen" id="pauseScreen">
+                <h2 class="overlay-title" style="color: var(--border-glow-cyan);">PAUSA DO SISTEMA</h2>
+                <p class="overlay-subtitle">Sistemas do caça colocados em modo stand-by.</p>
+                <button class="menu-btn" id="resumeGameBtn">VOLTAR AO COMBATE (ESC)</button>
+            </div>
+
+            <!-- Mobile Touch Controls overlay (only visible if touch is active) -->
+            <div class="mobile-controls" id="touchControls">
+                <button class="touch-btn" id="touchLeft" aria-label="Mover para esquerda">◀</button>
+                <button class="touch-btn shoot" id="touchShoot" aria-label="Atirar">⚡</button>
+                <button class="touch-btn" id="touchRight" aria-label="Mover para direita">▶</button>
+            </div>
+        </section>
+
+        <!-- Right Sideboard: Settings & Target Log -->
+        <aside class="dashboard-panel cockpit-right" aria-label="Configurações e Defesas">
+            <div class="panel-decor-top"></div>
+            <h2 class="panel-title">MANUAL DE VOO</h2>
+            
+            <div class="controls-list monitor-screen">
+                <div class="control-item">
+                    <span>PILOTAGEM</span>
+                    <span class="control-key">◀ ▶ / A D</span>
+                </div>
+                <div class="control-item">
+                    <span>ACELERAR</span>
+                    <span class="control-key">▲ / W</span>
+                </div>
+                <div class="control-item">
+                    <span>DESACELERAR</span>
+                    <span class="control-key">▼ / S</span>
+                </div>
+                <div class="control-item">
+                    <span>LASER</span>
+                    <span class="control-key">ESPAÇO</span>
+                </div>
+                <div class="control-item">
+                    <span>PAUSAR</span>
+                    <span class="control-key">ESC</span>
+                </div>
+                <div class="control-item" id="gamepadIndicator" style="display: none; border: none; padding: 10px 0 0 0; justify-content: center; align-items: center; gap: 8px; color: var(--border-glow-cyan); font-weight: bold; text-shadow: 0 0 8px var(--border-glow-cyan);">
+                    🎮 JOYSTICK ATIVO
+                </div>
+            </div>
+
+            <h2 class="panel-title" style="margin-top: 10px;">CONFIGURAÇÕES</h2>
+            
+            <div class="settings-list cockpit-module">
+                <div class="setting-item">
+                    <label class="toggle-container" for="muteToggle">
+                        <span class="setting-label">Sons da Nave</span>
+                        <input type="checkbox" id="muteToggle" class="toggle-input">
+                        <div class="toggle-switch"></div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label class="toggle-container" for="crtToggle">
+                        <span class="setting-label">Filtro Retro CRT</span>
+                        <input type="checkbox" id="crtToggle" class="toggle-input" checked>
+                        <div class="toggle-switch"></div>
+                    </label>
+                </div>
+            </div>
+
+            <h2 class="panel-title" style="margin-top: 10px;">TOP PILOTOS</h2>
+            
+            <div class="high-score-list" id="highScoreList" aria-live="polite">
+                <!-- Renders the top list from localStorage -->
+            </div>
+            <div class="panel-decor-bottom"></div>
+        </aside>
+
+    </main>
+
+    <!-- Load Game Scripts -->
+    <script src="sound.js?v=6"></script>
+    <script src="level.js?v=6"></script>
+    <script src="game.js?v=6"></script>
+</body>
+</html>

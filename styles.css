@@ -1,0 +1,764 @@
+/* styles.css - Cyberpunk Sci-Fi Cockpit styling for River Raid - Neon Edition */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap');
+
+:root {
+    --bg-color: #030009;
+    --panel-bg: rgba(12, 6, 28, 0.72);
+    --border-glow-pink: #ff007f;
+    --border-glow-cyan: #00ffcc;
+    --neon-blue: #00f3ff;
+    --neon-yellow: #ffb700;
+    --text-color: #d1c2ec;
+    --retro-font: 'Press Start 2P', monospace;
+    --hud-font: 'Orbitron', sans-serif;
+    
+    --hologram-cyan: rgba(0, 255, 204, 0.85);
+    --hologram-pink: rgba(255, 0, 127, 0.85);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-color);
+    background-image: 
+        linear-gradient(to bottom, rgba(3, 0, 9, 0.9), rgba(10, 2, 24, 0.95)),
+        radial-gradient(circle at center, rgba(140, 0, 180, 0.12) 0%, rgba(0, 0, 0, 0.9) 100%);
+    color: var(--text-color);
+    font-family: var(--hud-font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+}
+
+/* Background Cyber Grid */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: 
+        linear-gradient(rgba(255, 0, 127, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 0, 127, 0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: -2;
+    pointer-events: none;
+}
+
+/* Main Cockpit Layout */
+.arcade-container {
+    display: flex;
+    flex-direction: row;
+    gap: 28px;
+    align-items: stretch;
+    justify-content: center;
+    max-width: 1250px;
+    padding: 20px;
+    position: relative;
+}
+
+/* Cybernetic Glassmorphic Side Panels */
+.dashboard-panel {
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 2px solid rgba(0, 243, 255, 0.25);
+    box-shadow: 
+        0 0 20px rgba(0, 243, 255, 0.1), 
+        inset 0 0 25px rgba(255, 0, 127, 0.03);
+    padding: 24px 20px;
+    width: 270px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    position: relative;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.cockpit-left {
+    border-top-left-radius: 40px;
+    border-bottom-left-radius: 40px;
+    border-right: none;
+}
+
+.cockpit-right {
+    border-top-right-radius: 40px;
+    border-bottom-right-radius: 40px;
+    border-left: none;
+}
+
+/* Cybernetic corner decors */
+.panel-decor-top, .panel-decor-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--border-glow-pink), var(--border-glow-cyan));
+    box-shadow: 0 0 10px var(--neon-blue);
+    opacity: 0.8;
+}
+
+.panel-decor-top {
+    top: 0;
+}
+.panel-decor-bottom {
+    bottom: 0;
+}
+
+.cockpit-left .panel-decor-top { border-top-left-radius: 40px; }
+.cockpit-left .panel-decor-bottom { border-bottom-left-radius: 40px; }
+.cockpit-right .panel-decor-top { border-top-right-radius: 40px; }
+.cockpit-right .panel-decor-bottom { border-bottom-right-radius: 40px; }
+
+.dashboard-panel:hover {
+    box-shadow: 
+        0 0 30px rgba(0, 243, 255, 0.2), 
+        inset 0 0 30px rgba(255, 0, 127, 0.08);
+    border-color: rgba(0, 243, 255, 0.5);
+}
+
+.panel-title {
+    font-family: var(--retro-font);
+    font-size: 0.7rem;
+    color: var(--neon-blue);
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.7);
+    border-bottom: 2px solid rgba(255, 0, 127, 0.25);
+    padding-bottom: 10px;
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+/* Cockpit Monitor Widgets */
+.monitor-screen {
+    background: rgba(4, 2, 10, 0.85);
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: inset 0 0 12px rgba(0, 255, 204, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Diagnostic Scanlines inside monitors */
+.monitor-screen::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 255, 204, 0.05) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+}
+
+/* Stats UI styling */
+.stat-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: rgba(209, 194, 236, 0.55);
+    letter-spacing: 1.5px;
+}
+
+.stat-value {
+    font-family: var(--retro-font);
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+.stat-value.neon-glow-pink {
+    text-shadow: 0 0 8px rgba(255, 0, 127, 0.8), 0 0 15px var(--border-glow-pink);
+}
+
+.stat-value.neon-glow-cyan {
+    text-shadow: 0 0 8px rgba(0, 255, 204, 0.8), 0 0 15px var(--border-glow-cyan);
+}
+
+/* Subsystems Diagnostics Status */
+.subsystems-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.subsystem-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    color: rgba(209, 194, 236, 0.8);
+}
+
+.hud-led {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #555;
+    box-shadow: 0 0 2px #000;
+}
+
+.hud-led.active {
+    background: var(--border-glow-cyan);
+    box-shadow: 0 0 8px var(--border-glow-cyan);
+    animation: led-pulse 2s infinite alternate;
+}
+
+@keyframes led-pulse {
+    from { opacity: 0.5; }
+    to { opacity: 1; filter: brightness(1.2); }
+}
+
+/* Lives Indicator UI */
+.lives-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    justify-content: center;
+    background: rgba(255, 0, 127, 0.05);
+    border: 1px solid rgba(255, 0, 127, 0.15);
+    border-radius: 6px;
+    padding: 8px;
+}
+
+/* Fuel Reactor UI (Cockpit module) */
+.fuel-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fuel-gauge {
+    width: 100%;
+    height: 26px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(0, 255, 204, 0.4);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 12px rgba(0, 255, 204, 0.2);
+}
+
+.fuel-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--border-glow-cyan) 0%, var(--neon-blue) 100%);
+    box-shadow: 0 0 12px var(--neon-blue);
+    transition: width 0.1s linear, background 0.3s ease;
+}
+
+/* Tech Grid pattern over fuel bar */
+.fuel-grid-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.25) 2px, transparent 2px);
+    background-size: 10px 100%;
+    pointer-events: none;
+}
+
+.fuel-gauge.warning {
+    border-color: var(--border-glow-pink);
+    animation: fuel-pulse 0.4s alternate infinite;
+}
+
+.fuel-gauge.warning .fuel-fill {
+    background: linear-gradient(90deg, var(--border-glow-pink) 0%, #ff5e00 100%);
+    box-shadow: 0 0 15px var(--border-glow-pink);
+}
+
+.fuel-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--retro-font);
+    font-size: 0.55rem;
+    color: rgba(209, 194, 236, 0.6);
+}
+
+.blinking-warning {
+    color: var(--border-glow-pink);
+    font-family: var(--retro-font);
+    font-size: 0.65rem;
+    text-align: center;
+    animation: blinker 0.6s step-start infinite;
+    display: none;
+    text-shadow: 0 0 8px var(--border-glow-pink);
+    margin-top: 8px;
+    border: 1px solid var(--border-glow-pink);
+    padding: 6px;
+    border-radius: 4px;
+    background: rgba(255, 0, 127, 0.08);
+}
+
+.blinking-warning.active {
+    display: block;
+}
+
+/* Game Cabinet Area styling */
+.game-cabinet {
+    position: relative;
+    border: 4px solid #1a0f30;
+    border-radius: 16px;
+    box-shadow: 
+        0 0 0 4px #00f3ff,
+        0 0 35px rgba(0, 243, 255, 0.45),
+        0 25px 60px rgba(0, 0, 0, 0.95);
+    overflow: hidden;
+    background: #000;
+}
+
+.game-cabinet::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 12px;
+    box-shadow: inset 0 0 45px rgba(0, 243, 255, 0.22);
+    pointer-events: none;
+    z-index: 10;
+}
+
+#gameCanvas {
+    display: block;
+    image-rendering: pixelated;
+    max-width: 100%;
+}
+
+/* CRT Screen Effects */
+.crt-effect {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 8;
+    overflow: hidden;
+}
+
+.crt-effect::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background-size: 100% 4px, 6px 100%;
+    z-index: 9;
+}
+
+.crt-effect::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: rgba(18, 16, 16, 0.1);
+    opacity: 0;
+    z-index: 9;
+    animation: flicker 0.15s infinite;
+}
+
+.crt-off .crt-effect::before,
+.crt-off .crt-effect::after {
+    display: none;
+}
+
+/* Game Interface Glass Overlays */
+.overlay-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(6, 3, 15, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+    transition: opacity 0.4s ease, visibility 0.4s;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.overlay-screen.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Neon logo text glow */
+.overlay-title {
+    font-family: var(--retro-font);
+    font-size: 2rem;
+    color: #fff;
+    text-shadow: 
+        0 0 10px var(--border-glow-pink),
+        0 0 25px var(--border-glow-pink),
+        0 0 45px rgba(255, 0, 127, 0.7);
+    margin-bottom: 24px;
+    line-height: 1.4;
+    letter-spacing: 2px;
+    z-index: 2;
+}
+
+.cyan-neon-text {
+    color: #fff;
+    font-size: 1.15rem;
+    letter-spacing: 4px;
+    text-shadow: 
+        0 0 8px var(--border-glow-cyan),
+        0 0 20px var(--border-glow-cyan),
+        0 0 35px rgba(0, 255, 204, 0.7);
+}
+
+.overlay-subtitle {
+    font-size: 0.85rem;
+    color: rgba(209, 194, 236, 0.7);
+    margin-bottom: 25px;
+    max-width: 440px;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+    z-index: 2;
+}
+
+/* 3D Scrolling Perspective Grid background for menus */
+.perspective-grid-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    overflow: hidden;
+    perspective: 120px;
+    transform-style: preserve-3d;
+    z-index: 1;
+    opacity: 0.28;
+    pointer-events: none;
+}
+
+.perspective-grid {
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background-image: 
+        linear-gradient(rgba(0, 255, 204, 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 204, 0.15) 1px, transparent 1px);
+    background-size: 40px 40px;
+    transform: rotateX(60deg);
+    animation: grid-scroll 3s linear infinite;
+}
+
+@keyframes grid-scroll {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: 0 80px;
+    }
+}
+
+/* Premium Menu Banner Cover Art */
+.menu-banner {
+    max-width: 260px;
+    border-radius: 12px;
+    border: 2px solid var(--border-glow-pink);
+    box-shadow: 0 0 16px rgba(255, 0, 127, 0.5);
+    margin-bottom: 22px;
+    z-index: 2;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.menu-banner:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 25px var(--border-glow-pink);
+}
+
+/* Premium Segmented Buttons for Difficulty Select */
+.difficulty-section {
+    display: flex;
+    flex-direction: column;
+    margin: 15px 0 25px 0;
+    width: 250px;
+    z-index: 2;
+}
+
+.difficulty-selector {
+    display: flex;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
+}
+
+.diff-btn {
+    flex: 1;
+    font-family: var(--hud-font);
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: rgba(0, 243, 255, 0.6);
+    background: transparent;
+    border: none;
+    padding: 10px 0;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    letter-spacing: 1px;
+    outline: none;
+}
+
+.diff-btn:not(:last-child) {
+    border-right: 1px solid rgba(0, 243, 255, 0.2);
+}
+
+.diff-btn:hover {
+    color: #fff;
+    background: rgba(0, 243, 255, 0.12);
+}
+
+.diff-btn.active {
+    color: #000;
+    background: var(--border-glow-cyan);
+    font-weight: 900;
+    box-shadow: 0 0 15px var(--border-glow-cyan);
+    text-shadow: none;
+}
+
+/* Cockpit Menu Buttons styling */
+.menu-btn {
+    font-family: var(--retro-font);
+    font-size: 0.8rem;
+    color: #fff;
+    background: rgba(255, 0, 127, 0.15);
+    border: 2px solid var(--border-glow-pink);
+    border-radius: 8px;
+    padding: 14px 34px;
+    cursor: pointer;
+    text-shadow: 0 0 6px #fff;
+    box-shadow: 0 0 12px rgba(255, 0, 127, 0.4);
+    transition: all 0.2s ease;
+    outline: none;
+    z-index: 2;
+    letter-spacing: 1px;
+}
+
+.menu-btn:hover {
+    background: rgba(255, 0, 127, 0.38);
+    box-shadow: 0 0 25px var(--border-glow-pink);
+    transform: scale(1.05);
+}
+
+.menu-btn:active {
+    transform: scale(0.96);
+}
+
+.menu-btn.secondary {
+    background: rgba(0, 255, 204, 0.1);
+    border-color: var(--border-glow-cyan);
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.3);
+    text-shadow: 0 0 6px #fff;
+}
+
+.menu-btn.secondary:hover {
+    background: rgba(0, 255, 204, 0.35);
+    box-shadow: 0 0 25px var(--border-glow-cyan);
+}
+
+/* Keyboard list bindings guide */
+.controls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.control-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+    border-bottom: 1px dashed rgba(209, 194, 236, 0.12);
+    padding-bottom: 8px;
+}
+
+.control-key {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-family: var(--retro-font);
+    font-size: 0.55rem;
+    color: var(--neon-blue);
+    box-shadow: 0 2px 0 rgba(0, 243, 255, 0.2);
+}
+
+/* High-tech Toggle Switch styling */
+.toggle-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 46px;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(255, 0, 127, 0.4);
+    border-radius: 12px;
+    transition: background 0.3s, border-color 0.3s;
+}
+
+.toggle-switch::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--border-glow-pink);
+    box-shadow: 0 0 6px var(--border-glow-pink);
+    transition: transform 0.25s, background 0.25s, box-shadow 0.25s;
+}
+
+.toggle-input {
+    display: none;
+}
+
+.toggle-input:checked + .toggle-switch {
+    border-color: rgba(0, 255, 204, 0.6);
+}
+
+.toggle-input:checked + .toggle-switch::after {
+    transform: translateX(22px);
+    background: var(--border-glow-cyan);
+    box-shadow: 0 0 6px var(--border-glow-cyan);
+}
+
+/* Cyber Leaderboard list */
+.high-score-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.high-score-list::-webkit-scrollbar {
+    width: 4px;
+}
+.high-score-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+.high-score-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 243, 255, 0.35);
+    border-radius: 2px;
+}
+
+.score-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 5px;
+    border-left: 3px solid var(--border-glow-pink);
+}
+
+.score-row.highlight {
+    border-left-color: var(--border-glow-cyan);
+    background: rgba(0, 255, 204, 0.08);
+}
+
+.score-rank {
+    color: var(--neon-blue);
+    font-family: var(--retro-font);
+    font-size: 0.6rem;
+}
+
+.score-points {
+    font-family: var(--retro-font);
+    font-size: 0.6rem;
+    color: #fff;
+}
+
+/* Mobile buttons styling */
+.mobile-controls {
+    display: none;
+    position: absolute;
+    bottom: 20px; left: 20px; right: 20px;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 6;
+}
+
+.touch-btn {
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    background: rgba(22, 10, 45, 0.85);
+    border: 2px solid var(--border-glow-cyan);
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.3);
+    color: #fff;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
+.touch-btn:active {
+    background: rgba(0, 255, 204, 0.5);
+    box-shadow: 0 0 20px var(--border-glow-cyan);
+    transform: scale(0.9);
+}
+
+.touch-btn.shoot {
+    border-color: var(--border-glow-pink);
+    box-shadow: 0 0 12px rgba(255, 0, 127, 0.35);
+    width: 72px; height: 72px;
+}
+
+.touch-btn.shoot:active {
+    background: rgba(255, 0, 127, 0.5);
+    box-shadow: 0 0 25px var(--border-glow-pink);
+}
+
+/* Media Queries */
+@media (max-width: 1024px) {
+    .arcade-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+    
+    .dashboard-panel {
+        width: 100%;
+        max-width: 600px;
+    }
+    
+    .cockpit-left {
+        border-radius: 20px;
+    }
+    
+    .cockpit-right {
+        border-radius: 20px;
+    }
+}
+
+/* Text glow blinking */
+@keyframes blinker {
+    50% { opacity: 0.2; }
+}
