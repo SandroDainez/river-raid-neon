@@ -169,8 +169,8 @@ class LevelGenerator {
                 segment.fuelDepots.push({
                     x: center + (Math.random() - 0.5) * (width - 40),
                     y: segment.y + this.segmentHeight / 2,
-                    width: 24,
-                    height: 40,
+                    width: 30,
+                    height: 30,
                     fuelAmount: 100
                 });
             } else if (roll < fuelChance + spawnChance) {

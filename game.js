@@ -45,8 +45,8 @@ class RiverRaidGame {
         this.player = {
             x: this.width / 2,
             y: this.height - 150,
-            width: 34,
-            height: 30,
+            width: 30,
+            height: 34,
             speedX: 5,
             targetX: this.width / 2, // for mouse/touch steering
             fuel: 100,
@@ -77,15 +77,34 @@ class RiverRaidGame {
         this.bridgesDestroyed = 0;
 
         // Load Sprite Assets
-        this.playerSprite = new Image();
-        this.playerSprite.src = 'images/player_jet.png';
-        this.playerSpriteLoaded = false;
-        this.playerSpriteCanvas = null;
-        
-        this.playerSprite.onload = () => {
-            this.playerSpriteCanvas = this.makeImageTransparent(this.playerSprite);
-            this.playerSpriteLoaded = true;
+        this.sprites = {
+            player: { img: null, loaded: false, src: 'images/player_jet.png' },
+            boat: { img: null, loaded: false, src: 'images/enemy_boat.png' },
+            chopper: { img: null, loaded: false, src: 'images/enemy_chopper.png' },
+            enemyJet: { img: null, loaded: false, src: 'images/enemy_jet.png' },
+            fuel: { img: null, loaded: false, src: 'images/fuel_depot.png' }
         };
+
+        Object.keys(this.sprites).forEach(key => {
+            const spriteObj = this.sprites[key];
+            const img = new Image();
+            let loaded = false;
+            img.onload = () => {
+                if (!loaded) {
+                    loaded = true;
+                    spriteObj.img = img;
+                    spriteObj.loaded = true;
+                }
+            };
+            img.src = spriteObj.src;
+            if (img.complete && img.naturalWidth !== 0) {
+                if (!loaded) {
+                    loaded = true;
+                    spriteObj.img = img;
+                    spriteObj.loaded = true;
+                }
+            }
+        });
 
         // Initialize game
         this.init();
@@ -1046,11 +1065,11 @@ class RiverRaidGame {
         this.ctx.closePath();
         this.ctx.fill();
 
-        if (this.playerSpriteLoaded && this.playerSpriteCanvas) {
+        if (this.sprites.player.loaded && this.sprites.player.img) {
             // Draw premium transparent jet sprite centered at player coordinates
             this.ctx.shadowColor = '#00f3ff';
             this.ctx.shadowBlur = 12;
-            this.ctx.drawImage(this.playerSpriteCanvas, x - w, y - h, w * 2, h * 2);
+            this.ctx.drawImage(this.sprites.player.img, x - w/2, y - h/2, w, h);
         } else {
             // Fallback vector outline jet fighter
             this.ctx.shadowColor = '#00f3ff';
@@ -1112,35 +1131,40 @@ class RiverRaidGame {
         const h = depot.height;
 
         this.ctx.save();
-        this.ctx.shadowColor = '#00ffcc';
-        this.ctx.shadowBlur = 8;
 
-        // Draw capsule background
-        this.ctx.fillStyle = 'rgba(0, 255, 204, 0.15)';
-        this.ctx.strokeStyle = '#00ffcc';
-        this.ctx.lineWidth = 2;
-        
-        // Draw capsule rounded rect
-        this.ctx.beginPath();
-        if (this.ctx.roundRect) {
-            this.ctx.roundRect(x - w/2, y - h/2, w, h, 6);
+        if (this.sprites.fuel.loaded && this.sprites.fuel.img) {
+            this.ctx.shadowColor = '#00ffcc';
+            this.ctx.shadowBlur = 10;
+            this.ctx.drawImage(this.sprites.fuel.img, x - w/2, y - h/2, w, h);
         } else {
-            this.ctx.rect(x - w/2, y - h/2, w, h);
-        }
-        this.ctx.fill();
-        this.ctx.stroke();
+            // Fallback capsule rounded rect
+            this.ctx.shadowColor = '#00ffcc';
+            this.ctx.shadowBlur = 8;
+            this.ctx.fillStyle = 'rgba(0, 255, 204, 0.15)';
+            this.ctx.strokeStyle = '#00ffcc';
+            this.ctx.lineWidth = 2;
+            
+            this.ctx.beginPath();
+            if (this.ctx.roundRect) {
+                this.ctx.roundRect(x - w/2, y - h/2, w, h, 6);
+            } else {
+                this.ctx.rect(x - w/2, y - h/2, w, h);
+            }
+            this.ctx.fill();
+            this.ctx.stroke();
 
-        // Draw FUEL letters vertically
-        this.ctx.shadowBlur = 0;
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 8px Courier New';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        
-        this.ctx.fillText('F', x, y - 12);
-        this.ctx.fillText('U', x, y - 4);
-        this.ctx.fillText('E', x, y + 4);
-        this.ctx.fillText('L', x, y + 12);
+            // Draw FUEL letters vertically
+            this.ctx.shadowBlur = 0;
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = 'bold 8px Courier New';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            this.ctx.fillText('F', x, y - 12);
+            this.ctx.fillText('U', x, y - 4);
+            this.ctx.fillText('E', x, y + 4);
+            this.ctx.fillText('L', x, y + 12);
+        }
 
         this.ctx.restore();
     }
@@ -1153,101 +1177,125 @@ class RiverRaidGame {
 
         this.ctx.save();
 
+        const dirSign = Math.sign(enemy.speedX);
+        const angle = dirSign < 0 ? -Math.PI / 2 : Math.PI / 2;
+
         if (enemy.type === 'boat') {
-            // Neon cyan ship
-            this.ctx.shadowColor = '#00ffcc';
-            this.ctx.shadowBlur = 10;
-            this.ctx.strokeStyle = '#00ffcc';
-            this.ctx.fillStyle = 'rgba(0, 255, 204, 0.2)';
-            this.ctx.lineWidth = 2;
+            if (this.sprites.boat.loaded && this.sprites.boat.img) {
+                this.ctx.translate(x, y);
+                this.ctx.rotate(angle);
+                this.ctx.shadowColor = '#00ffcc';
+                this.ctx.shadowBlur = 10;
+                this.ctx.drawImage(this.sprites.boat.img, -w/2, -h/2, w, h);
+            } else {
+                // Fallback neon cyan ship
+                this.ctx.shadowColor = '#00ffcc';
+                this.ctx.shadowBlur = 10;
+                this.ctx.strokeStyle = '#00ffcc';
+                this.ctx.fillStyle = 'rgba(0, 255, 204, 0.2)';
+                this.ctx.lineWidth = 2;
 
-            this.ctx.beginPath();
-            this.ctx.moveTo(x - w/2, y + h/3);
-            this.ctx.lineTo(x - w/3, y - h/3);
-            this.ctx.lineTo(x + w/3, y - h/3);
-            this.ctx.lineTo(x + w/2, y + h/3);
-            this.ctx.lineTo(x + w/4, y + h/2);
-            this.ctx.lineTo(x - w/4, y + h/2);
-            this.ctx.closePath();
-            this.ctx.fill();
-            this.ctx.stroke();
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - w/2, y + h/3);
+                this.ctx.lineTo(x - w/3, y - h/3);
+                this.ctx.lineTo(x + w/3, y - h/3);
+                this.ctx.lineTo(x + w/2, y + h/3);
+                this.ctx.lineTo(x + w/4, y + h/2);
+                this.ctx.lineTo(x - w/4, y + h/2);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
 
-            // Radar dome
-            this.ctx.beginPath();
-            this.ctx.arc(x, y - h/6, 3, 0, Math.PI * 2);
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.fill();
+                // Radar dome
+                this.ctx.beginPath();
+                this.ctx.arc(x, y - h/6, 3, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fill();
+            }
         } 
         else if (enemy.type === 'helicopter') {
-            // Neon yellow chopper
-            this.ctx.shadowColor = '#ffb700';
-            this.ctx.shadowBlur = 10;
-            this.ctx.strokeStyle = '#ffb700';
-            this.ctx.fillStyle = 'rgba(255, 183, 0, 0.2)';
-            this.ctx.lineWidth = 2;
+            if (this.sprites.chopper.loaded && this.sprites.chopper.img) {
+                this.ctx.translate(x, y);
+                this.ctx.rotate(angle);
+                this.ctx.shadowColor = '#ffb700';
+                this.ctx.shadowBlur = 10;
+                this.ctx.drawImage(this.sprites.chopper.img, -w/2, -h/2, w, h);
+            } else {
+                // Fallback neon yellow chopper
+                this.ctx.shadowColor = '#ffb700';
+                this.ctx.shadowBlur = 10;
+                this.ctx.strokeStyle = '#ffb700';
+                this.ctx.fillStyle = 'rgba(255, 183, 0, 0.2)';
+                this.ctx.lineWidth = 2;
 
-            // Main body circle
-            this.ctx.beginPath();
-            this.ctx.arc(x - 2, y + 2, 8, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.stroke();
+                // Main body circle
+                this.ctx.beginPath();
+                this.ctx.arc(x - 2, y + 2, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.stroke();
 
-            // Tail
-            this.ctx.beginPath();
-            this.ctx.moveTo(x - 10, y + 2);
-            this.ctx.lineTo(x - w/2, y);
-            this.ctx.lineTo(x - w/2, y - 4);
-            this.ctx.stroke();
+                // Tail
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - 10, y + 2);
+                this.ctx.lineTo(x - w/2, y);
+                this.ctx.lineTo(x - w/2, y - 4);
+                this.ctx.stroke();
 
-            // Rotor blade spinning animation
-            this.ctx.shadowColor = '#ff007f';
-            this.ctx.strokeStyle = '#ff007f';
-            const spin = Math.sin(enemy.animationFrame) * (w / 2);
-            this.ctx.beginPath();
-            this.ctx.moveTo(x - 2 - spin, y - 8);
-            this.ctx.lineTo(x - 2 + spin, y - 8);
-            this.ctx.stroke();
-            
-            // Rotor shaft
-            this.ctx.strokeStyle = '#ffb700';
-            this.ctx.beginPath();
-            this.ctx.moveTo(x - 2, y - 6);
-            this.ctx.lineTo(x - 2, y + 2);
-            this.ctx.stroke();
+                // Rotor blade spinning animation
+                this.ctx.shadowColor = '#ff007f';
+                this.ctx.strokeStyle = '#ff007f';
+                const spin = Math.sin(enemy.animationFrame) * (w / 2);
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - 2 - spin, y - 8);
+                this.ctx.lineTo(x - 2 + spin, y - 8);
+                this.ctx.stroke();
+                
+                // Rotor shaft
+                this.ctx.strokeStyle = '#ffb700';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - 2, y - 6);
+                this.ctx.lineTo(x - 2, y + 2);
+                this.ctx.stroke();
+            }
         } 
         else if (enemy.type === 'jet') {
-            // Neon pink fighter plane
-            this.ctx.shadowColor = '#ff007f';
-            this.ctx.shadowBlur = 10;
-            this.ctx.strokeStyle = '#ff007f';
-            this.ctx.fillStyle = 'rgba(255, 0, 127, 0.2)';
-            this.ctx.lineWidth = 2;
-
-            this.ctx.beginPath();
-            // Point forward (based on flying direction speedX)
-            const dirSign = Math.sign(enemy.speedX);
-            
-            if (dirSign >= 0) {
-                // Flying Right
-                this.ctx.moveTo(x + w/2, y);
-                this.ctx.lineTo(x - w/4, y - h/2);
-                this.ctx.lineTo(x - w/2, y - h/2);
-                this.ctx.lineTo(x - w/3, y);
-                this.ctx.lineTo(x - w/2, y + h/2);
-                this.ctx.lineTo(x - w/4, y + h/2);
+            if (this.sprites.enemyJet.loaded && this.sprites.enemyJet.img) {
+                this.ctx.translate(x, y);
+                this.ctx.rotate(angle);
+                this.ctx.shadowColor = '#ff007f';
+                this.ctx.shadowBlur = 10;
+                this.ctx.drawImage(this.sprites.enemyJet.img, -w/2, -h/2, w, h);
             } else {
-                // Flying Left
-                this.ctx.moveTo(x - w/2, y);
-                this.ctx.lineTo(x + w/4, y - h/2);
-                this.ctx.lineTo(x + w/2, y - h/2);
-                this.ctx.lineTo(x + w/3, y);
-                this.ctx.lineTo(x + w/2, y + h/2);
-                this.ctx.lineTo(x + w/4, y + h/2);
+                // Fallback neon pink fighter plane
+                this.ctx.shadowColor = '#ff007f';
+                this.ctx.shadowBlur = 10;
+                this.ctx.strokeStyle = '#ff007f';
+                this.ctx.fillStyle = 'rgba(255, 0, 127, 0.2)';
+                this.ctx.lineWidth = 2;
+
+                this.ctx.beginPath();
+                if (dirSign >= 0) {
+                    // Flying Right
+                    this.ctx.moveTo(x + w/2, y);
+                    this.ctx.lineTo(x - w/4, y - h/2);
+                    this.ctx.lineTo(x - w/2, y - h/2);
+                    this.ctx.lineTo(x - w/3, y);
+                    this.ctx.lineTo(x - w/2, y + h/2);
+                    this.ctx.lineTo(x - w/4, y + h/2);
+                } else {
+                    // Flying Left
+                    this.ctx.moveTo(x - w/2, y);
+                    this.ctx.lineTo(x + w/4, y - h/2);
+                    this.ctx.lineTo(x + w/2, y - h/2);
+                    this.ctx.lineTo(x + w/3, y);
+                    this.ctx.lineTo(x + w/2, y + h/2);
+                    this.ctx.lineTo(x + w/4, y + h/2);
+                }
+                
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
             }
-            
-            this.ctx.closePath();
-            this.ctx.fill();
-            this.ctx.stroke();
         }
 
         this.ctx.restore();
