@@ -38,6 +38,11 @@ class RiverRaidGame {
         this.baseScrollSpeed = 2.5;
         this.scrollSpeed = this.baseScrollSpeed;
         
+        // Mouse controls tracking
+        this.mouseX = this.width / 2;
+        this.mouseY = this.height - 150;
+        this.mouseActive = false;
+        
         // Instantiate procedural level generator
         this.levelGen = new LevelGenerator(this.width, this.height);
         
@@ -192,6 +197,7 @@ class RiverRaidGame {
         // Keyboard Inputs
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
+            this.mouseActive = false; // Keyboard input disables mouse controls override
             
             // Start game on Enter
             if (e.code === 'Enter' && this.state === 'MENU') {
@@ -215,15 +221,23 @@ class RiverRaidGame {
             this.keys[e.code] = false;
         });
 
-        // Mouse Steering inside Canvas
+        // Mouse Steering & Speed control inside Canvas
         this.canvas.addEventListener('mousemove', (e) => {
             if (this.state !== 'PLAYING' && this.state !== 'RESPAWNING') return;
             const rect = this.canvas.getBoundingClientRect();
-            const root = document.documentElement;
-            // Calculate relative mouse position
+            // Calculate relative mouse positions
             const mouseX = e.clientX - rect.left - (this.player.width / 2);
-            // Move player to targetX
+            const mouseY = e.clientY - rect.top;
+            
+            // Move player horizontally
             this.player.targetX = Math.max(30, Math.min(this.width - 30, mouseX + this.player.width/2));
+            this.mouseX = mouseX + this.player.width/2;
+            this.mouseY = mouseY;
+            this.mouseActive = true; // Actively moving mouse enables mouse controls override
+        });
+
+        this.canvas.addEventListener('mouseleave', () => {
+            this.mouseActive = false;
         });
 
         this.canvas.addEventListener('mousedown', (e) => {
@@ -450,7 +464,7 @@ class RiverRaidGame {
     handleInput() {
         if (this.state !== 'PLAYING' && this.state !== 'RESPAWNING') return;
 
-        // 1. Keyboard Speed adjustment W/S, Up/Down
+        // 1. Speed adjustment (Keyboard W/S, Up/Down, or Mouse Vertical)
         if (this.boss) {
             // Lock to slow scroll during boss battle to allow fuel depots to spawn/drift
             this.scrollSpeed = 0.8;
@@ -462,6 +476,31 @@ class RiverRaidGame {
             } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
                 this.scrollSpeed = this.baseScrollSpeed * 0.5; // Slow down
                 this.player.fuelBurnRate = this.baseFuelBurnRate * 0.5; // Consumes fuel slower
+            } else if (this.mouseActive) {
+                // Mouse-based progressive speed control:
+                // Neutral zone: 70px above player (580) to 50px below player (700). Player.y is 650.
+                const neutralTop = this.player.y - 70;
+                const neutralBottom = this.player.y + 50;
+                
+                if (this.mouseY < neutralTop) {
+                    // Pushed mouse forward: Accelerate (progressive)
+                    // Max acceleration achieved when mouse is 400px or more above the neutral top
+                    const dist = neutralTop - this.mouseY;
+                    const amt = Math.min(1.0, Math.max(0.0, dist / 400));
+                    this.scrollSpeed = this.baseScrollSpeed * (1.0 + amt * 0.7);
+                    this.player.fuelBurnRate = this.baseFuelBurnRate * (1.0 + amt * 1.0);
+                } else if (this.mouseY > neutralBottom) {
+                    // Pulled mouse backward: Decelerate (progressive)
+                    // Min speed achieved when mouse is 80px or more below the neutral bottom
+                    const dist = this.mouseY - neutralBottom;
+                    const amt = Math.min(1.0, Math.max(0.0, dist / 80));
+                    this.scrollSpeed = this.baseScrollSpeed * (1.0 - amt * 0.5);
+                    this.player.fuelBurnRate = this.baseFuelBurnRate * (1.0 - amt * 0.5);
+                } else {
+                    // Inside neutral band: normal speed
+                    this.scrollSpeed = this.baseScrollSpeed;
+                    this.player.fuelBurnRate = this.baseFuelBurnRate;
+                }
             } else {
                 this.scrollSpeed = this.baseScrollSpeed;
                 this.player.fuelBurnRate = this.baseFuelBurnRate;
@@ -525,10 +564,13 @@ class RiverRaidGame {
             const axisX = activeGamepad.axes[0];
             if (Math.abs(axisX) > 0.15) {
                 steer = axisX;
+                this.mouseActive = false; // Disable mouse controls on active gamepad steering
             } else if (activeGamepad.buttons[14].pressed) {
                 steer = -1.0;
+                this.mouseActive = false;
             } else if (activeGamepad.buttons[15].pressed) {
                 steer = 1.0;
+                this.mouseActive = false;
             }
 
             if (steer !== 0) {
@@ -541,18 +583,25 @@ class RiverRaidGame {
             const axisY = activeGamepad.axes[1];
             if (Math.abs(axisY) > 0.2) {
                 vertical = axisY;
+                this.mouseActive = false; // Disable mouse controls on active gamepad speed changes
             } else if (activeGamepad.buttons[12].pressed) {
                 vertical = -1.0;
+                this.mouseActive = false;
             } else if (activeGamepad.buttons[13].pressed) {
                 vertical = 1.0;
+                this.mouseActive = false;
             }
 
-            if (vertical < -0.3) {
-                this.scrollSpeed = this.baseScrollSpeed * 1.7; // Speed up
-                this.player.fuelBurnRate = 0.08;
-            } else if (vertical > 0.3) {
-                this.scrollSpeed = this.baseScrollSpeed * 0.5; // Slow down
-                this.player.fuelBurnRate = 0.02;
+            if (vertical < -0.2) {
+                // Pushed forward: speed up (progressive)
+                const amt = Math.min(1.0, (-vertical - 0.2) / 0.8);
+                this.scrollSpeed = this.baseScrollSpeed * (1.0 + amt * 0.7);
+                this.player.fuelBurnRate = this.baseFuelBurnRate * (1.0 + amt * 1.0);
+            } else if (vertical > 0.2) {
+                // Pulled backward: slow down (progressive)
+                const amt = Math.min(1.0, (vertical - 0.2) / 0.8);
+                this.scrollSpeed = this.baseScrollSpeed * (1.0 - amt * 0.5);
+                this.player.fuelBurnRate = this.baseFuelBurnRate * (1.0 - amt * 0.5);
             }
 
             // Shoot: Button 0 (A/Cross), Button 2 (X/Square), or Button 7 (RT)
