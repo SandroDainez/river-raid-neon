@@ -1262,6 +1262,10 @@ class RiverRaidGame {
 
     // Canvas Rendering
     render() {
+        // Enable high-quality image smoothing for clean, crisp scaled-down sprites
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+
         // Clear canvas
         this.ctx.clearRect(0, 0, this.width, this.height);
 
