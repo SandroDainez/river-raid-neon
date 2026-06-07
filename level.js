@@ -24,6 +24,8 @@ class LevelGenerator {
         this.segmentsSinceLastBridge = 0;
         
         this.difficulty = 1;
+        this.sector = 1;
+        this.bossActive = false;
         this.scrollOffset = 0;
     }
 
@@ -38,6 +40,8 @@ class LevelGenerator {
         this.islandWidth = 0;
         this.segmentsSinceLastBridge = 40; // Allow some buffer at start
         this.difficulty = 1;
+        this.sector = 1;
+        this.bossActive = false;
         this.scrollOffset = 0;
         
         // Pre-populate screen with safe wide river segments
@@ -51,6 +55,13 @@ class LevelGenerator {
         this.difficulty = level;
     }
 
+    setSector(sector) {
+        this.sector = sector;
+        if (sector !== 10) {
+            this.bossActive = false;
+        }
+    }
+
     // Generate a single segment of the river
     generateNextSegment(safeStart = false) {
         const index = this.nextSegmentIndex++;
@@ -58,14 +69,26 @@ class LevelGenerator {
 
         // Procedural changes to river width and center
         if (index % 15 === 0) {
-            // Pick new target width and center
-            // High level narrows the river more often
-            const minWidth = Math.max(160, 320 - this.difficulty * 15);
-            const maxWidth = Math.max(280, 480 - this.difficulty * 10);
+            let minWidth = Math.max(160, 320 - this.difficulty * 15);
+            let maxWidth = Math.max(280, 480 - this.difficulty * 10);
+            
+            if (this.sector === 8) {
+                minWidth = 170;
+                maxWidth = 240; // narrow maze canyon!
+            } else if (this.sector === 10 && this.segmentsSinceLastBridge > this.bridgeInterval - 20) {
+                // Prepare flat wide river for boss arena
+                minWidth = 520;
+                maxWidth = 520;
+            }
+            
             this.targetWidth = minWidth + Math.random() * (maxWidth - minWidth);
             
-            const margin = this.targetWidth / 2 + 40;
-            this.targetCenterX = margin + Math.random() * (this.width - margin * 2);
+            let targetCenterX = this.width / 2;
+            if (!(this.sector === 10 && this.segmentsSinceLastBridge > this.bridgeInterval - 20)) {
+                const margin = this.targetWidth / 2 + 40;
+                targetCenterX = margin + Math.random() * (this.width - margin * 2);
+            }
+            this.targetCenterX = targetCenterX;
         }
 
         // Smoothly interpolate center and width
@@ -81,15 +104,31 @@ class LevelGenerator {
         if (rightWallX > this.width - 20) rightWallX = this.width - 20;
 
         // Island generation logic (spawns sometimes when river is wide enough)
-        if (!safeStart && this.currentWidth > 320 && !this.islandActive && Math.random() < 0.02 && this.segmentsSinceLastBridge < this.bridgeInterval - 20) {
-            this.islandActive = true;
-            this.islandWidth = 10;
-            this.islandCenterX = this.currentCenterX;
+        const approachBoss = this.sector === 10 && this.segmentsSinceLastBridge > this.bridgeInterval - 25;
+        const isSector8 = this.sector === 8;
+        const isBossActive = this.bossActive;
+        
+        if (!safeStart && !approachBoss && !isBossActive) {
+            const spawnIslandRoll = Math.random();
+            const spawnIslandChance = isSector8 ? 0.09 : 0.02; // Sector 8 has high island spawn rate
+            const requiredWidth = isSector8 ? 220 : 320;
+            
+            if (this.currentWidth > requiredWidth && !this.islandActive && spawnIslandRoll < spawnIslandChance && this.segmentsSinceLastBridge < this.bridgeInterval - 20) {
+                this.islandActive = true;
+                this.islandWidth = 10;
+                this.islandCenterX = this.currentCenterX;
+            }
+        }
+
+        if (this.islandActive && (approachBoss || isBossActive)) {
+            this.islandActive = false;
+            this.islandWidth = 0;
         }
 
         if (this.islandActive) {
             // Grow island or shrink island
-            if (this.islandWidth < 80 && Math.random() < 0.3) {
+            const maxIslandWidth = isSector8 ? 50 : 80;
+            if (this.islandWidth < maxIslandWidth && Math.random() < 0.3) {
                 this.islandWidth += 15;
             } else if (Math.random() < 0.1) {
                 // Decay island
@@ -106,7 +145,9 @@ class LevelGenerator {
         // Determine if we spawn a bridge
         let hasBridge = false;
         if (!safeStart && this.segmentsSinceLastBridge >= this.bridgeInterval) {
-            hasBridge = true;
+            if (this.sector !== 10) {
+                hasBridge = true;
+            }
             this.segmentsSinceLastBridge = 0;
             this.islandActive = false; // Turn off island for bridges
             this.islandWidth = 0;
@@ -143,6 +184,41 @@ class LevelGenerator {
     }
 
     spawnEntities(segment) {
+        if (this.bossActive) {
+            // Spawning in boss arena: only spawn fuel depots occasionally!
+            if (Math.random() < 0.06) {
+                segment.fuelDepots.push({
+                    x: segment.leftWallX + 40 + Math.random() * (segment.rightWallX - segment.leftWallX - 80),
+                    y: segment.y + this.segmentHeight / 2,
+                    width: 48,
+                    height: 48,
+                    fuelAmount: 100
+                });
+            }
+            return;
+        }
+
+        // Shore turrets spawn in Sectors 6, 7, 9, 10
+        const hasTurrets = [6, 7, 9, 10].includes(this.sector);
+        if (hasTurrets && Math.random() < 0.15) {
+            const onLeftShore = Math.random() < 0.5;
+            const turretX = onLeftShore ? segment.leftWallX - 22 : segment.rightWallX + 22;
+            segment.enemies.push({
+                type: 'turret',
+                x: turretX,
+                y: segment.y + this.segmentHeight / 2,
+                width: 32,
+                height: 32,
+                speedX: 0,
+                scoreValue: 150,
+                shootCooldown: Math.random() * 80 + 40,
+                channelLeft: turretX,
+                channelRight: turretX,
+                animationFrame: 0,
+                pulseDirection: 1
+            });
+        }
+
         // Probabilities based on difficulty
         const spawnChance = 0.12 + Math.min(0.18, this.difficulty * 0.03); // increases with level
         const fuelChance = 0.07; // Fuel is essential but should be balanced
@@ -182,18 +258,37 @@ class LevelGenerator {
                 let scoreValue = 60;
                 let speed = 1 + this.difficulty * 0.2;
                 
-                if (enemyRoll < 0.4) {
+                if (this.sector === 1) {
+                    // Only boats in Sector 1
                     enemyType = 'boat';
                     scoreValue = 30;
                     speed = 0.5 + this.difficulty * 0.1;
-                } else if (enemyRoll < 0.8) {
-                    enemyType = 'helicopter';
-                    scoreValue = 60;
-                    speed = 1.2 + this.difficulty * 0.3;
+                } else if (this.sector === 2) {
+                    // Only boats and helicopters in Sector 2
+                    if (enemyRoll < 0.5) {
+                        enemyType = 'boat';
+                        scoreValue = 30;
+                        speed = 0.5 + this.difficulty * 0.1;
+                    } else {
+                        enemyType = 'helicopter';
+                        scoreValue = 60;
+                        speed = 1.2 + this.difficulty * 0.3;
+                    }
                 } else {
-                    enemyType = 'jet';
-                    scoreValue = 100;
-                    speed = 2.5 + this.difficulty * 0.5; // Fast!
+                    // All enemy types in Sector 3+
+                    if (enemyRoll < 0.4) {
+                        enemyType = 'boat';
+                        scoreValue = 30;
+                        speed = 0.5 + this.difficulty * 0.1;
+                    } else if (enemyRoll < 0.8) {
+                        enemyType = 'helicopter';
+                        scoreValue = 60;
+                        speed = 1.2 + this.difficulty * 0.3;
+                    } else {
+                        enemyType = 'jet';
+                        scoreValue = 100;
+                        speed = 2.5 + this.difficulty * 0.5; // Fast!
+                    }
                 }
 
                 const dir = Math.random() < 0.5 ? -1 : 1;

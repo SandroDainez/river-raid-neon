@@ -76,6 +76,19 @@ class RiverRaidGame {
         // Bridge score count (to transition levels)
         this.bridgesDestroyed = 0;
 
+        // Campaign Mode & Weather states
+        this.enemyProjectiles = [];
+        this.fogParticles = [];
+        this.boss = null;
+        this.victoryTriggered = false;
+        this.windStrength = 0.8;
+        this.bossMaxHp = 20;
+
+        this.nightMaskCanvas = document.createElement('canvas');
+        this.nightMaskCanvas.width = this.width;
+        this.nightMaskCanvas.height = this.height;
+        this.nightMaskCtx = this.nightMaskCanvas.getContext('2d');
+
         // Load Sprite Assets
         this.sprites = {
             player: { img: null, loaded: false, src: 'images/player_jet.png' },
@@ -223,6 +236,11 @@ class RiverRaidGame {
             this.startGame();
         });
 
+        // Victory restart button click
+        document.getElementById('victoryRestartBtn').addEventListener('click', () => {
+            this.startGame();
+        });
+
         // Restart button click
         document.getElementById('restartGameBtn').addEventListener('click', () => {
             this.startGame();
@@ -315,7 +333,6 @@ class RiverRaidGame {
         // Setup initial stats
         this.score = 0;
         this.level = 1;
-        this.lives = 4;
         this.bridgesDestroyed = 0;
         this.player.fuel = 100;
         this.player.x = this.width / 2;
@@ -325,15 +342,58 @@ class RiverRaidGame {
 
         this.bullets = [];
         this.particles = [];
+        this.enemyProjectiles = [];
+        this.boss = null;
+        this.victoryTriggered = false;
         
-        // Set generator difficulty
+        // Set difficulty variables
         const difficulty = parseInt(localStorage.getItem('riverRaid_difficulty') || '1');
+        
+        let startingLives = 4;
+        let baseFuelBurnRate = 0.04;
+        this.windStrength = 0.8;
+        this.bossMaxHp = 20;
+        
+        if (difficulty === 1) {
+            startingLives = 4;
+            baseFuelBurnRate = 0.04;
+            this.windStrength = 0.8;
+            this.bossMaxHp = 20;
+        } else if (difficulty === 2) {
+            startingLives = 3;
+            baseFuelBurnRate = 0.05;
+            this.windStrength = 1.3;
+            this.bossMaxHp = 30;
+        } else if (difficulty === 3) {
+            startingLives = 2;
+            baseFuelBurnRate = 0.06;
+            this.windStrength = 1.8;
+            this.bossMaxHp = 40;
+        }
+        
+        this.lives = startingLives;
+        this.player.fuelBurnRate = baseFuelBurnRate;
+        this.baseFuelBurnRate = baseFuelBurnRate; // Store base value
+
         this.levelGen.reset();
+        this.levelGen.setSector(this.level);
         this.levelGen.setDifficulty(difficulty + this.level - 1);
         
         // Reset base scroll speed based on difficulty
         this.baseScrollSpeed = 2 + difficulty * 0.5;
         this.scrollSpeed = this.baseScrollSpeed;
+        
+        // Initialize fog particles
+        this.fogParticles = [];
+        for (let i = 0; i < 8; i++) {
+            this.fogParticles.push({
+                x: Math.random() * this.width,
+                y: Math.random() * this.height,
+                vx: -0.5 - Math.random() * 0.5,
+                vy: 1 + Math.random() * 1.5,
+                size: 140 + Math.random() * 90
+            });
+        }
         
         this.updateHUD();
         this.renderLives();
@@ -358,6 +418,7 @@ class RiverRaidGame {
         document.getElementById('startScreen').classList.remove('active');
         document.getElementById('gameOverScreen').classList.remove('active');
         document.getElementById('pauseScreen').classList.remove('active');
+        document.getElementById('victoryScreen').classList.remove('active');
     }
 
     gameOver() {
@@ -390,15 +451,21 @@ class RiverRaidGame {
         if (this.state !== 'PLAYING' && this.state !== 'RESPAWNING') return;
 
         // 1. Keyboard Speed adjustment W/S, Up/Down
-        if (this.keys['KeyW'] || this.keys['ArrowUp']) {
-            this.scrollSpeed = this.baseScrollSpeed * 1.7; // Speed up
-            this.player.fuelBurnRate = 0.08; // Consumes fuel faster
-        } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
-            this.scrollSpeed = this.baseScrollSpeed * 0.5; // Slow down
-            this.player.fuelBurnRate = 0.02; // Consumes fuel slower
+        if (this.boss) {
+            // Lock to slow scroll during boss battle to allow fuel depots to spawn/drift
+            this.scrollSpeed = 0.8;
+            this.player.fuelBurnRate = this.baseFuelBurnRate;
         } else {
-            this.scrollSpeed = this.baseScrollSpeed;
-            this.player.fuelBurnRate = 0.04;
+            if (this.keys['KeyW'] || this.keys['ArrowUp']) {
+                this.scrollSpeed = this.baseScrollSpeed * 1.7; // Speed up
+                this.player.fuelBurnRate = this.baseFuelBurnRate * 2.0; // Consumes fuel faster
+            } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
+                this.scrollSpeed = this.baseScrollSpeed * 0.5; // Slow down
+                this.player.fuelBurnRate = this.baseFuelBurnRate * 0.5; // Consumes fuel slower
+            } else {
+                this.scrollSpeed = this.baseScrollSpeed;
+                this.player.fuelBurnRate = this.baseFuelBurnRate;
+            }
         }
 
         // 2. Keyboard Horizontal Movement Keys
@@ -413,16 +480,22 @@ class RiverRaidGame {
             this.player.x += dx;
             this.player.targetX = this.player.x;
         } else {
-            // Smoothly move towards mouse/touch targetX using proportional speed (feels incredibly responsive!)
+            // Smoothly move towards mouse/touch targetX using proportional speed
             const diff = this.player.targetX - this.player.x;
             if (Math.abs(diff) > 1) {
-                const speed = Math.min(12, Math.abs(diff) * 0.2); // Faster follow for large distances, capped at 12px/frame
+                const speed = Math.min(12, Math.abs(diff) * 0.2); // Proportional follow
                 this.player.x += Math.sign(diff) * speed;
             }
         }
 
         // 3. Physical Gamepad (Joystick) support
         this.handleGamepadInput();
+
+        // 4. Sector 4 Wind Draft
+        if (this.level === 4) {
+            const wind = Math.sin(Date.now() / 400) * this.windStrength;
+            this.player.x += wind;
+        }
 
         // Keep player inside screen
         this.player.x = Math.max(30, Math.min(this.width - 30, this.player.x));
@@ -562,6 +635,87 @@ class RiverRaidGame {
             // Scroll river & update active segments
             this.levelGen.update(this.scrollSpeed);
 
+            // Spawning of Boss Cruiser in Sector 10
+            if (this.level === 10 && !this.boss && !this.victoryTriggered && this.levelGen.segmentsSinceLastBridge >= this.levelGen.bridgeInterval) {
+                this.spawnBoss();
+            }
+
+            // Update Boss State
+            if (this.boss && this.boss.hp > 0) {
+                if (this.boss.y < this.boss.targetY) {
+                    this.boss.y += 1.5;
+                }
+                
+                this.boss.turrets.forEach(turret => {
+                    turret.shootCooldown--;
+                    if (turret.shootCooldown <= 0) {
+                        const tx = this.boss.x + turret.xOffset;
+                        const ty = this.boss.y + turret.yOffset;
+                        const angle = Math.atan2(this.player.y - ty, this.player.x - tx);
+                        
+                        this.enemyProjectiles.push({
+                            x: tx,
+                            y: ty,
+                            vx: Math.cos(angle) * 4.5,
+                            vy: Math.sin(angle) * 4.5,
+                            width: 6,
+                            height: 6,
+                            color: '#ff3333'
+                        });
+                        
+                        turret.shootCooldown = 70 + Math.random() * 50;
+                    }
+                });
+            }
+
+            // Update shoreline turrets shooting
+            this.levelGen.segments.forEach(seg => {
+                seg.enemies.forEach(enemy => {
+                    if (enemy.type === 'turret') {
+                        enemy.shootCooldown--;
+                        if (enemy.shootCooldown <= 0) {
+                            const angle = Math.atan2(this.player.y - enemy.y, this.player.x - enemy.x);
+                            this.enemyProjectiles.push({
+                                x: enemy.x,
+                                y: enemy.y,
+                                vx: Math.cos(angle) * 3.5,
+                                vy: Math.sin(angle) * 3.5,
+                                width: 6,
+                                height: 6,
+                                color: '#ff3333'
+                            });
+                            enemy.shootCooldown = 90 + Math.random() * 60;
+                        }
+                    }
+                });
+            });
+
+            // Update enemy projectiles
+            for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
+                const proj = this.enemyProjectiles[i];
+                proj.x += proj.vx;
+                proj.y += proj.vy;
+                
+                const pBox = {
+                    left: this.player.x - this.player.width / 2,
+                    right: this.player.x + this.player.width / 2,
+                    top: this.player.y - this.player.height / 2,
+                    bottom: this.player.y + this.player.height / 2
+                };
+                
+                if (proj.x > pBox.left && proj.x < pBox.right && proj.y > pBox.top && proj.y < pBox.bottom) {
+                    this.enemyProjectiles.splice(i, 1);
+                    if (!this.player.isBlinking && this.state === 'PLAYING') {
+                        this.triggerCrash('DERRUBADO POR MÍSSIL ANTIAÉREO');
+                    }
+                    continue;
+                }
+                
+                if (proj.y > this.height || proj.y < 0 || proj.x > this.width || proj.x < 0) {
+                    this.enemyProjectiles.splice(i, 1);
+                }
+            }
+
             // Update Bullets
             for (let i = this.bullets.length - 1; i >= 0; i--) {
                 this.bullets[i].y -= 10; // bullet speed
@@ -605,6 +759,21 @@ class RiverRaidGame {
             top: this.player.y - this.player.height / 2,
             bottom: this.player.y + this.player.height / 2
         };
+
+        // Check Player against Boss Cruiser
+        if (this.boss && this.boss.hp > 0 && !this.player.isBlinking) {
+            const bBox = {
+                left: this.boss.x - this.boss.width / 2,
+                right: this.boss.x + this.boss.width / 2,
+                top: this.boss.y - this.boss.height / 2,
+                bottom: this.boss.y + this.boss.height / 2
+            };
+            if (pBox.right > bBox.left && pBox.left < bBox.right &&
+                pBox.bottom > bBox.top && pBox.top < bBox.bottom) {
+                this.triggerCrash('COLISÃO COM O CRUZADOR INIMIGO');
+                return;
+            }
+        }
 
         // 1. Check Player against River Banks & Bridges
         const activeSegs = this.levelGen.segments;
@@ -706,6 +875,30 @@ class RiverRaidGame {
 
             let bulletRemoved = false;
 
+            // Check against Boss Cruiser
+            if (this.boss && this.boss.hp > 0) {
+                const bossBox = {
+                    left: this.boss.x - this.boss.width / 2,
+                    right: this.boss.x + this.boss.width / 2,
+                    top: this.boss.y - this.boss.height / 2,
+                    bottom: this.boss.y + this.boss.height / 2
+                };
+                if (b.x > bossBox.left && b.x < bossBox.right && b.y > bossBox.top && b.y < bossBox.bottom) {
+                    this.bullets.splice(bIdx, 1);
+                    bulletRemoved = true;
+                    this.boss.hp--;
+                    this.boss.isBlinking = 8;
+                    this.sound.playExplosion();
+                    this.createExplosionParticles(b.x, b.y, '#ffb700', 8);
+                    
+                    if (this.boss.hp <= 0) {
+                        this.destroyBoss();
+                    }
+                }
+            }
+
+            if (bulletRemoved) continue;
+
             // Check against bridges
             for (let i = 0; i < activeSegs.length; i++) {
                 const seg = activeSegs[i];
@@ -723,7 +916,7 @@ class RiverRaidGame {
                         this.createExplosionParticles(b.x, bridgeY, '#ffff00', 35);
                         
                         // Check if we level up
-                        if (this.bridgesDestroyed % 4 === 0) {
+                        if (this.level < 10) {
                             this.levelUp();
                         }
                         break;
@@ -903,12 +1096,17 @@ class RiverRaidGame {
     levelUp() {
         this.level++;
         
+        // Update sector on generator
+        this.levelGen.setSector(this.level);
+        
         // Increase difficulty
         const difficulty = parseInt(localStorage.getItem('riverRaid_difficulty') || '1');
         this.levelGen.setDifficulty(difficulty + this.level - 1);
         
         this.baseScrollSpeed = 2 + difficulty * 0.5 + this.level * 0.3;
         this.scrollSpeed = this.baseScrollSpeed;
+        
+        this.enemyProjectiles = []; // Clear projectiles
         
         this.updateHUD();
         this.createExplosionParticles(this.width / 2, this.height / 2, '#00f3ff', 60);
@@ -989,6 +1187,57 @@ class RiverRaidGame {
         if (fuelFill) {
             fuelFill.style.width = `${this.player.fuel}%`;
         }
+
+        const weatherElement = document.getElementById('currentWeather');
+        if (weatherElement) {
+            let desc = 'NORMAL';
+            let color = 'var(--border-glow-cyan)';
+            
+            switch (this.level) {
+                case 1:
+                    desc = 'ENSOARADO';
+                    color = 'var(--border-glow-cyan)';
+                    break;
+                case 2:
+                    desc = 'NUBLADO';
+                    color = 'var(--border-glow-cyan)';
+                    break;
+                case 3:
+                    desc = 'VENTO SUAVE';
+                    color = 'var(--border-glow-cyan)';
+                    break;
+                case 4:
+                    desc = 'TEMPESTADE';
+                    color = 'var(--neon-yellow)';
+                    break;
+                case 5:
+                    desc = 'NIGHT OPS';
+                    color = 'var(--neon-blue)';
+                    break;
+                case 6:
+                    desc = 'BATERIAS AA';
+                    color = 'var(--border-glow-pink)';
+                    break;
+                case 7:
+                    desc = 'NEVOEIRO EM';
+                    color = 'var(--neon-yellow)';
+                    break;
+                case 8:
+                    desc = 'MAZE CANYON';
+                    color = 'var(--border-glow-cyan)';
+                    break;
+                case 9:
+                    desc = 'LINHA DE FOGO';
+                    color = 'var(--border-glow-pink)';
+                    break;
+                case 10:
+                    desc = 'COMBATE BOSS';
+                    color = 'var(--border-glow-pink)';
+                    break;
+            }
+            weatherElement.textContent = desc;
+            weatherElement.style.color = color;
+        }
     }
 
     renderLives() {
@@ -1035,6 +1284,11 @@ class RiverRaidGame {
             });
         }
 
+        // Draw Boss Cruiser if active
+        if (this.boss) {
+            this.drawBoss();
+        }
+
         // Draw Bullets
         this.ctx.fillStyle = '#ffffff';
         this.ctx.shadowBlur = 8;
@@ -1045,12 +1299,87 @@ class RiverRaidGame {
         }
         this.ctx.shadowBlur = 0; // reset glow
 
+        // Draw Enemy Projectiles
+        this.ctx.fillStyle = '#ff3333';
+        this.ctx.shadowBlur = 6;
+        this.ctx.shadowColor = '#ff3333';
+        for (let i = 0; i < this.enemyProjectiles.length; i++) {
+            const ep = this.enemyProjectiles[i];
+            this.ctx.fillRect(ep.x - ep.width / 2, ep.y - ep.height / 2, ep.width, ep.height);
+        }
+        this.ctx.shadowBlur = 0; // reset glow
+
         // Draw Player Jet
         if (this.state === 'PLAYING' || this.state === 'RESPAWNING') {
             const blinkState = !this.player.isBlinking || Math.floor(Date.now() / 100) % 2 === 0;
             if (blinkState) {
                 this.drawPlayerJet();
             }
+        }
+
+        // Render Weather & Atmosphere Overlays
+        // 1. Rain (Sector 4)
+        if (this.level === 4) {
+            this.ctx.save();
+            this.ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+            this.ctx.lineWidth = 1.5;
+            const rainCount = 28;
+            for (let r = 0; r < rainCount; r++) {
+                const rx = (r * 35 + Date.now() * 0.4) % this.width;
+                const ry = (r * 77 + Date.now() * 1.5) % this.height;
+                this.ctx.beginPath();
+                this.ctx.moveTo(rx, ry);
+                this.ctx.lineTo(rx - 8, ry + 24);
+                this.ctx.stroke();
+            }
+            this.ctx.restore();
+        }
+        
+        // 2. Night Searchlight (Sector 5)
+        if (this.level === 5 && (this.state === 'PLAYING' || this.state === 'RESPAWNING')) {
+            this.ctx.save();
+            this.nightMaskCtx.clearRect(0, 0, this.width, this.height);
+            this.nightMaskCtx.fillStyle = 'rgba(6, 4, 12, 0.94)';
+            this.nightMaskCtx.fillRect(0, 0, this.width, this.height);
+            this.nightMaskCtx.globalCompositeOperation = 'destination-out';
+            
+            const tipX = this.player.x;
+            const tipY = this.player.y - 12;
+            const coneAngle = Math.PI / 5.5;
+            const coneHeight = 360;
+            
+            this.nightMaskCtx.beginPath();
+            this.nightMaskCtx.moveTo(tipX, tipY);
+            this.nightMaskCtx.lineTo(tipX - Math.sin(coneAngle) * coneHeight, tipY - Math.cos(coneAngle) * coneHeight);
+            this.nightMaskCtx.lineTo(tipX + Math.sin(coneAngle) * coneHeight, tipY - Math.cos(coneAngle) * coneHeight);
+            this.nightMaskCtx.closePath();
+            
+            const grad = this.nightMaskCtx.createRadialGradient(tipX, tipY, 30, tipX, tipY - 180, 240);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+            grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+            this.nightMaskCtx.fillStyle = grad;
+            this.nightMaskCtx.fill();
+            
+            this.ctx.drawImage(this.nightMaskCanvas, 0, 0);
+            this.ctx.restore();
+        }
+        
+        // 3. Drifting Volumetric Fog (Sector 7)
+        if (this.level === 7) {
+            this.ctx.save();
+            this.ctx.globalAlpha = 0.25;
+            this.fogParticles.forEach(p => {
+                const grad = this.ctx.createRadialGradient(p.x, p.y, p.size * 0.1, p.x, p.y, p.size);
+                grad.addColorStop(0, 'rgba(224, 229, 235, 1)');
+                grad.addColorStop(0.7, 'rgba(224, 229, 235, 0.5)');
+                grad.addColorStop(1, 'rgba(224, 229, 235, 0)');
+                this.ctx.fillStyle = grad;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+            this.ctx.restore();
         }
 
         // Draw HUD Tactical Target Locking Overlay (always on top)
@@ -1079,7 +1408,11 @@ class RiverRaidGame {
             this.ctx.stroke();
             this.ctx.restore();
 
-            // 2. Draw Target Brackets for Enemies, Fuel, and Bridges
+            // 2. Draw Target Brackets for Enemies, Fuel, Bridges, and the Boss!
+            if (this.boss && this.boss.hp > 0) {
+                this.drawTargetHUD(this.boss.x, this.boss.y, this.boss.width - 40, this.boss.height - 10, 'CRUZADOR', '#ff3333');
+            }
+
             for (let i = 0; i < activeSegs.length; i++) {
                 const seg = activeSegs[i];
                 
@@ -1088,17 +1421,17 @@ class RiverRaidGame {
                     const bridgeY = seg.y + seg.bridgeYOffset;
                     const bridgeWidth = seg.rightWallX - seg.leftWallX;
                     const centerX = (seg.leftWallX + seg.rightWallX) / 2;
-                    this.drawTargetHUD(centerX, bridgeY, bridgeWidth - 20, 16, 'BRIDGE', '#ff3333');
+                    this.drawTargetHUD(centerX, bridgeY, bridgeWidth - 20, 16, 'PONTE', '#ff3333');
                 }
 
                 // Fuel Depots (green locks)
                 seg.fuelDepots.forEach(depot => {
-                    this.drawTargetHUD(depot.x, depot.y, depot.width, depot.height, 'FUEL', '#39ff14');
+                    this.drawTargetHUD(depot.x, depot.y, depot.width, depot.height, 'COMBUSTIVEL', '#39ff14');
                 });
 
                 // Enemies (red locks)
                 seg.enemies.forEach(enemy => {
-                    const label = enemy.type.toUpperCase();
+                    const label = enemy.type === 'turret' ? 'DEFESA AA' : enemy.type.toUpperCase();
                     this.drawTargetHUD(enemy.x, enemy.y, enemy.width, enemy.height, label, '#ff3333');
                 });
             }
@@ -1120,6 +1453,15 @@ class RiverRaidGame {
     }
 
     drawTargetHUD(x, y, w, h, label, color) {
+        if (this.level === 7) {
+            const roll = Math.random();
+            if (roll < 0.25) return; // Flickers out completely
+            if (roll < 0.45) {
+                // Distort position
+                x += (Math.random() - 0.5) * 8;
+                y += (Math.random() - 0.5) * 8;
+            }
+        }
         this.ctx.save();
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = 1.5;
@@ -1221,6 +1563,97 @@ class RiverRaidGame {
             this.ctx.stroke();
         }
 
+        this.ctx.restore();
+    }
+
+    drawBoss() {
+        const x = this.boss.x;
+        const y = this.boss.y;
+        const w = this.boss.width;
+        const h = this.boss.height;
+        
+        this.ctx.save();
+        
+        // Flash red if hit blinking
+        if (this.boss.isBlinking > 0) {
+            this.ctx.fillStyle = 'rgba(255, 51, 51, 0.7)';
+            this.boss.isBlinking--;
+        } else {
+            this.ctx.fillStyle = '#2f3c4d'; // Dark slate blue hull
+        }
+        
+        this.ctx.strokeStyle = '#5f7c8d';
+        this.ctx.lineWidth = 3;
+        
+        // Draw battleship deck/hull shape
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - w/2, y + h/2);
+        this.ctx.lineTo(x - w/2 + 25, y - h/2); // bow
+        this.ctx.lineTo(x + w/2 - 25, y - h/2); // bow
+        this.ctx.lineTo(x + w/2, y + h/2);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Draw bridge deck structure in center
+        this.ctx.fillStyle = '#4f5e71';
+        this.ctx.fillRect(x - 30, y - 15, 60, 30);
+        this.ctx.strokeRect(x - 30, y - 15, 60, 30);
+        
+        // Draw radar dish antenna rotating
+        this.ctx.strokeStyle = '#c4d7c4';
+        this.ctx.lineWidth = 2.5;
+        const antennaAngle = Date.now() * 0.005;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - 15);
+        this.ctx.lineTo(x + Math.cos(antennaAngle) * 15, y - 15 + Math.sin(antennaAngle) * 5);
+        this.ctx.stroke();
+        
+        // Draw the two turrets
+        this.boss.turrets.forEach(turret => {
+            const tx = x + turret.xOffset;
+            const ty = y + turret.yOffset;
+            
+            // Draw turret base
+            this.ctx.fillStyle = '#1e2630';
+            this.ctx.beginPath();
+            this.ctx.arc(tx, ty, 14, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            // Point gun barrel at player
+            const angle = Math.atan2(this.player.y - ty, this.player.x - tx);
+            this.ctx.strokeStyle = '#888888';
+            this.ctx.lineWidth = 4.5;
+            this.ctx.beginPath();
+            this.ctx.moveTo(tx, ty);
+            this.ctx.lineTo(tx + Math.cos(angle) * 20, ty + Math.sin(angle) * 20);
+            this.ctx.stroke();
+        });
+        
+        // Draw Health Bar above boss
+        const hbW = 180;
+        const hbH = 6;
+        const hbX = x - hbW / 2;
+        const hbY = y - h/2 - 18;
+        
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        this.ctx.fillRect(hbX, hbY, hbW, hbH);
+        
+        const hpPct = Math.max(0, this.boss.hp / this.boss.maxHp);
+        this.ctx.fillStyle = hpPct > 0.4 ? '#39ff14' : '#ff3333';
+        this.ctx.fillRect(hbX, hbY, hbW * hpPct, hbH);
+        
+        this.ctx.strokeStyle = '#5f7c8d';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(hbX, hbY, hbW, hbH);
+        
+        // Draw text label
+        this.ctx.fillStyle = '#ff3333';
+        this.ctx.font = 'bold 9px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('SUPER CRUZADOR DE BATALHA', x, hbY - 6);
+        
         this.ctx.restore();
     }
 
@@ -1425,6 +1858,37 @@ class RiverRaidGame {
                 this.ctx.fill();
                 this.ctx.stroke();
             }
+        } else if (enemy.type === 'turret') {
+            // Draw static Anti-Air turret base
+            this.ctx.fillStyle = '#2d3b48';
+            this.ctx.strokeStyle = '#ff3333';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, 15, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            // Outer armor ring
+            this.ctx.strokeStyle = '#5f7c8d';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, 19, 0, Math.PI * 2);
+            this.ctx.stroke();
+
+            // Point gun barrel at player
+            const angleToPlayer = Math.atan2(this.player.y - y, this.player.x - x);
+            this.ctx.strokeStyle = '#c4d7c4';
+            this.ctx.lineWidth = 4;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, y);
+            this.ctx.lineTo(x + Math.cos(angleToPlayer) * 20, y + Math.sin(angleToPlayer) * 20);
+            this.ctx.stroke();
+            
+            // Draw red sensor dot at barrel tip
+            this.ctx.fillStyle = '#ff3333';
+            this.ctx.beginPath();
+            this.ctx.arc(x + Math.cos(angleToPlayer) * 20, y + Math.sin(angleToPlayer) * 20, 2.5, 0, Math.PI * 2);
+            this.ctx.fill();
         }
 
         this.ctx.restore();
@@ -1504,6 +1968,70 @@ class RiverRaidGame {
                 </div>
             `;
         });
+    }
+
+    spawnBoss() {
+        this.boss = {
+            x: this.width / 2,
+            y: -120, // starts offscreen
+            targetY: 150,
+            width: 220,
+            height: 70,
+            hp: this.bossMaxHp,
+            maxHp: this.bossMaxHp,
+            isBlinking: 0,
+            turrets: [
+                { xOffset: -55, yOffset: 15, shootCooldown: 30 },
+                { xOffset: 55, yOffset: 15, shootCooldown: 70 }
+            ]
+        };
+        
+        this.levelGen.bossActive = true;
+        this.levelGen.segmentsSinceLastBridge = 0;
+        this.enemyProjectiles = [];
+    }
+
+    destroyBoss() {
+        this.sound.playBridgeExplosion();
+        
+        for (let i = 0; i < 6; i++) {
+            setTimeout(() => {
+                if (this.boss) {
+                    const ex = this.boss.x + (Math.random() - 0.5) * this.boss.width;
+                    const ey = this.boss.y + (Math.random() - 0.5) * this.boss.height;
+                    this.sound.playBridgeExplosion();
+                    this.createExplosionParticles(ex, ey, '#ff007f', 30);
+                    this.createExplosionParticles(ex, ey, '#ffb700', 20);
+                }
+            }, i * 200);
+        }
+        
+        if (this.boss) {
+            this.boss.hp = 0;
+        }
+        this.victoryTriggered = true;
+        this.score += 5000;
+        
+        setTimeout(() => {
+            this.showVictory();
+        }, 1600);
+    }
+
+    showVictory() {
+        this.state = 'VICTORY';
+        this.sound.stopLowFuelWarning();
+        this.sound.playStartMelody();
+        
+        this.hideAllOverlays();
+        
+        document.getElementById('victoryFinalScore').textContent = this.formatScore(this.score);
+        document.getElementById('victoryScreen').classList.add('active');
+        
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('riverRaid_highScore', this.highScore);
+            document.getElementById('highScore').textContent = this.formatScore(this.highScore);
+        }
     }
 }
 

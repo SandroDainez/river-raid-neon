@@ -31,6 +31,11 @@
                     <span class="stat-label">SETOR (SECTOR)</span>
                     <div class="stat-value" id="currentLevel">01</div>
                 </div>
+
+                <div class="stat-box">
+                    <span class="stat-label">CONDIÇÃO (WEATHER)</span>
+                    <div class="stat-value neon-glow-cyan" id="currentWeather" style="font-size: 0.95rem; letter-spacing: 1px; color: var(--border-glow-cyan);">SECO</div>
+                </div>
             </div>
 
             <!-- Subsystems status panel -->
@@ -97,11 +102,57 @@
                 <!-- Premium cover banner -->
                 <img src="images/game_banner.png" class="menu-banner" alt="River Raid Cover Art">
 
-                <p class="overlay-subtitle">Pilote seu caça de combate pelo desfiladeiro florestal, destrua alvos hostis em destaque vermelho e reabasteça nas refinarias marcadas em verde!</p>
+                <p class="overlay-subtitle" style="margin-bottom: 12px;">Pilote seu caça de combate pelo desfiladeiro florestal, destrua alvos hostis em destaque vermelho e reabasteça nas refinarias marcadas em verde!</p>
+
+                <div class="dossier-container">
+                    <div class="dossier-header">DOSSIÊ TÁTICO DAS MISSÕES</div>
+                    <div class="dossier-list">
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 01: OPERAÇÃO RIO LIMPO</span>
+                            <span class="dossier-desc">Treinamento básico. Alvos: Barcos. Clima: Ensolarado (Sem efeitos).</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 02: VALE DOS HELICÓPTEROS</span>
+                            <span class="dossier-desc">Helicópteros lentos e ilhas fluviais. Alvos: Barcos e Helicópteros.</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 03: AVANÇO SUPERSÔNICO</span>
+                            <span class="dossier-desc">Caças inimigos velozes em canais estreitos. Clima: Ventos estáveis.</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 04: TEMPESTADE TROPICAL</span>
+                            <span class="dossier-desc">Chuva e turbulência lateral empurram a aeronave horizontalmente.</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 05: OPERAÇÃO NOTURNA (NIGHT OPS)</span>
+                            <span class="dossier-desc">Escuridão total. Use o holofote dianteiro do caça para iluminar o rio.</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 06: BATERIAS DEFENSIVAS</span>
+                            <span class="dossier-desc">Torres antiaéreas terrestres nas margens disparam mísseis guiados.</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 07: NEVOEIRO ELETROMAGNÉTICO</span>
+                            <span class="dossier-desc">Nevoeiro espesso. O HUD digital de mira sofre estática e pisca.</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 08: LABIRINTO DE CANAIS</span>
+                            <span class="dossier-desc">Desfiladeiros estreitos com bifurcações e ilhas complexas. Alta precisão.</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 09: CORTINA DE FOGO</span>
+                            <span class="dossier-desc">Defesa de costa extrema. Concentração de torres e jatos rápidos.</span>
+                        </div>
+                        <div class="dossier-item">
+                            <span class="dossier-sector">SETOR 10: SUPER CRUZADOR (BOSS)</span>
+                            <span class="dossier-desc">Confronto contra o Super Cruzador de Batalha. Destrua-o para vencer!</span>
+                        </div>
+                    </div>
+                </div>
                 
-                <button class="menu-btn neon-pulse-pink" id="startGameBtn">INICIAR OPERAÇÃO (ENTER)</button>
+                <button class="menu-btn neon-pulse-pink" id="startGameBtn" style="margin-bottom: 12px;">INICIAR OPERAÇÃO (ENTER)</button>
                 
-                <div class="difficulty-section">
+                <div class="difficulty-section" style="margin-top: 5px; margin-bottom: 15px;">
                     <span class="setting-label" style="text-align: center; margin-bottom: 8px;">DIFICULDADE DE VOO</span>
                     <div class="difficulty-selector" id="difficultyGroup">
                         <button class="diff-btn active" data-value="1">NORMAL</button>
@@ -135,6 +186,22 @@
                 <h2 class="overlay-title" style="color: var(--border-glow-cyan);">PAUSA DO SISTEMA</h2>
                 <p class="overlay-subtitle">Sistemas do caça colocados em modo stand-by.</p>
                 <button class="menu-btn" id="resumeGameBtn">VOLTAR AO COMBATE (ESC)</button>
+            </div>
+
+            <!-- 4. Victory Screen -->
+            <div class="overlay-screen" id="victoryScreen">
+                <div class="perspective-grid-container">
+                    <div class="perspective-grid"></div>
+                </div>
+                <h2 class="overlay-title" style="color: var(--border-glow-cyan); text-shadow: 0 0 15px var(--border-glow-cyan);">OPERAÇÃO CONCLUÍDA</h2>
+                <p class="overlay-subtitle" style="color: #fff; font-weight: bold; max-width: 460px; margin-bottom: 20px;">PARABÉNS, PILOTO! O Super Cruzador inimigo foi destruído, a rota fluvial está segura e a guerra foi vencida!</p>
+                
+                <div class="stat-box" style="margin-bottom: 25px;">
+                    <span class="stat-label">PONTUAÇÃO FINAL</span>
+                    <div class="stat-value neon-glow-cyan" id="victoryFinalScore" style="font-size: 2.4rem;">00000</div>
+                </div>
+                
+                <button class="menu-btn secondary" id="victoryRestartBtn">REINICIAR CAMPANHA</button>
             </div>
 
             <!-- Mobile Touch Controls overlay (only visible if touch is active) -->
