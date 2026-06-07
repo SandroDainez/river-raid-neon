@@ -653,20 +653,7 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 180px;
-    overflow-y: auto;
-    padding-right: 4px;
-}
-
-.high-score-list::-webkit-scrollbar {
-    width: 4px;
-}
-.high-score-list::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.3);
-}
-.high-score-list::-webkit-scrollbar-thumb {
-    background: rgba(0, 243, 255, 0.35);
-    border-radius: 2px;
+    overflow: hidden;
 }
 
 .score-row {

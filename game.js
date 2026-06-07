@@ -1195,7 +1195,7 @@ class RiverRaidGame {
             
             switch (this.level) {
                 case 1:
-                    desc = 'ENSOARADO';
+                    desc = 'ENSOLARADO';
                     color = 'var(--border-glow-cyan)';
                     break;
                 case 2:
