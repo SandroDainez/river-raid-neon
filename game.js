@@ -82,8 +82,13 @@ class RiverRaidGame {
             boat: { img: null, loaded: false, src: 'images/enemy_boat.png' },
             chopper: { img: null, loaded: false, src: 'images/enemy_chopper.png' },
             enemyJet: { img: null, loaded: false, src: 'images/enemy_jet.png' },
-            fuel: { img: null, loaded: false, src: 'images/fuel_depot.png' }
+            fuel: { img: null, loaded: false, src: 'images/fuel_depot.png' },
+            forest: { img: null, loaded: false, src: 'images/forest_texture.png' },
+            water: { img: null, loaded: false, src: 'images/water_texture.png' }
         };
+
+        this.forestPattern = null;
+        this.waterPattern = null;
 
         Object.keys(this.sprites).forEach(key => {
             const spriteObj = this.sprites[key];
@@ -94,6 +99,12 @@ class RiverRaidGame {
                     loaded = true;
                     spriteObj.img = img;
                     spriteObj.loaded = true;
+                    if (key === 'forest') {
+                        this.forestPattern = this.ctx.createPattern(img, 'repeat');
+                    }
+                    if (key === 'water') {
+                        this.waterPattern = this.ctx.createPattern(img, 'repeat');
+                    }
                 }
             };
             img.src = spriteObj.src;
@@ -102,6 +113,12 @@ class RiverRaidGame {
                     loaded = true;
                     spriteObj.img = img;
                     spriteObj.loaded = true;
+                    if (key === 'forest') {
+                        this.forestPattern = this.ctx.createPattern(img, 'repeat');
+                    }
+                    if (key === 'water') {
+                        this.waterPattern = this.ctx.createPattern(img, 'repeat');
+                    }
                 }
             }
         });
@@ -994,8 +1011,8 @@ class RiverRaidGame {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.width, this.height);
 
-        // Draw procedurally generated river banks and islands
-        this.levelGen.draw(this.ctx);
+        // Draw procedurally generated river banks and islands with realistic textures
+        this.levelGen.draw(this.ctx, this.forestPattern, this.waterPattern);
 
         // Render Enemies and Fuel Depots
         const activeSegs = this.levelGen.segments;
@@ -1031,6 +1048,57 @@ class RiverRaidGame {
             }
         }
 
+        // Draw HUD Tactical Target Locking Overlay (always on top)
+        if (this.state === 'PLAYING' || this.state === 'RESPAWNING') {
+            // 1. Draw Player flight vector reticle in front of the jet
+            this.ctx.save();
+            this.ctx.strokeStyle = '#39ff14';
+            this.ctx.lineWidth = 1.2;
+            const rx = this.player.x;
+            const ry = this.player.y - 45;
+            
+            // Draw reticle circle
+            this.ctx.beginPath();
+            this.ctx.arc(rx, ry, 6, 0, Math.PI * 2);
+            this.ctx.stroke();
+            // Draw crosshair lines
+            this.ctx.beginPath();
+            this.ctx.moveTo(rx - 12, ry);
+            this.ctx.lineTo(rx - 3, ry);
+            this.ctx.moveTo(rx + 3, ry);
+            this.ctx.lineTo(rx + 12, ry);
+            this.ctx.moveTo(rx, ry - 12);
+            this.ctx.lineTo(rx, ry - 3);
+            this.ctx.moveTo(rx, ry + 3);
+            this.ctx.lineTo(rx, ry + 12);
+            this.ctx.stroke();
+            this.ctx.restore();
+
+            // 2. Draw Target Brackets for Enemies, Fuel, and Bridges
+            for (let i = 0; i < activeSegs.length; i++) {
+                const seg = activeSegs[i];
+                
+                // Active bridge (red locks)
+                if (seg.hasBridge && !seg.bridgeDestroyed) {
+                    const bridgeY = seg.y + seg.bridgeYOffset;
+                    const bridgeWidth = seg.rightWallX - seg.leftWallX;
+                    const centerX = (seg.leftWallX + seg.rightWallX) / 2;
+                    this.drawTargetHUD(centerX, bridgeY, bridgeWidth - 20, 16, 'BRIDGE', '#ff3333');
+                }
+
+                // Fuel Depots (green locks)
+                seg.fuelDepots.forEach(depot => {
+                    this.drawTargetHUD(depot.x, depot.y, depot.width, depot.height, 'FUEL', '#39ff14');
+                });
+
+                // Enemies (red locks)
+                seg.enemies.forEach(enemy => {
+                    const label = enemy.type.toUpperCase();
+                    this.drawTargetHUD(enemy.x, enemy.y, enemy.width, enemy.height, label, '#ff3333');
+                });
+            }
+        }
+
         // Draw Particles
         for (let i = 0; i < this.particles.length; i++) {
             const p = this.particles[i];
@@ -1046,6 +1114,63 @@ class RiverRaidGame {
         }
     }
 
+    drawTargetHUD(x, y, w, h, label, color) {
+        this.ctx.save();
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 1.5;
+        this.ctx.shadowBlur = 0; // Keep HUD clean and crisp
+
+        // Draw corner brackets
+        const size = Math.min(8, w / 4, h / 4);
+        
+        const left = x - w / 2 - 4;
+        const right = x + w / 2 + 4;
+        const top = y - h / 2 - 4;
+        const bottom = y + h / 2 + 4;
+
+        // Top-Left corner
+        this.ctx.beginPath();
+        this.ctx.moveTo(left + size, top);
+        this.ctx.lineTo(left, top);
+        this.ctx.lineTo(left, top + size);
+        this.ctx.stroke();
+
+        // Top-Right corner
+        this.ctx.beginPath();
+        this.ctx.moveTo(right - size, top);
+        this.ctx.lineTo(right, top);
+        this.ctx.lineTo(right, top + size);
+        this.ctx.stroke();
+
+        // Bottom-Left corner
+        this.ctx.beginPath();
+        this.ctx.moveTo(left + size, bottom);
+        this.ctx.lineTo(left, bottom);
+        this.ctx.lineTo(left, bottom - size);
+        this.ctx.stroke();
+
+        // Bottom-Right corner
+        this.ctx.beginPath();
+        this.ctx.moveTo(right - size, bottom);
+        this.ctx.lineTo(right, bottom);
+        this.ctx.lineTo(right, bottom - size);
+        this.ctx.stroke();
+
+        // Draw label text next to brackets
+        this.ctx.fillStyle = color;
+        this.ctx.font = 'bold 9px monospace';
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'top';
+        this.ctx.fillText(label, right + 6, top);
+        
+        // Draw distance marker (simulate cockpit HUD distance)
+        const simulatedDist = Math.max(10, Math.floor(y / 2));
+        this.ctx.font = '7px monospace';
+        this.ctx.fillText(`${simulatedDist}m`, right + 6, top + 10);
+
+        this.ctx.restore();
+    }
+
     drawPlayerJet() {
         const x = this.player.x;
         const y = this.player.y;
@@ -1058,6 +1183,7 @@ class RiverRaidGame {
         const thrusterSize = 8 + Math.random() * 8;
         this.ctx.shadowColor = '#ff5e00';
         this.ctx.fillStyle = '#ff5e00';
+        this.ctx.shadowBlur = 10;
         this.ctx.beginPath();
         this.ctx.moveTo(x - w/8, y + h/2);
         this.ctx.lineTo(x, y + h/2 + thrusterSize);
@@ -1067,8 +1193,7 @@ class RiverRaidGame {
 
         if (this.sprites.player.loaded && this.sprites.player.img) {
             // Draw premium transparent jet sprite centered at player coordinates
-            this.ctx.shadowColor = '#00f3ff';
-            this.ctx.shadowBlur = 12;
+            this.ctx.shadowBlur = 0; // Clean realistic drawing
             this.ctx.drawImage(this.sprites.player.img, x - w/2, y - h/2, w, h);
         } else {
             // Fallback vector outline jet fighter
@@ -1133,8 +1258,7 @@ class RiverRaidGame {
         this.ctx.save();
 
         if (this.sprites.fuel.loaded && this.sprites.fuel.img) {
-            this.ctx.shadowColor = '#00ffcc';
-            this.ctx.shadowBlur = 10;
+            this.ctx.shadowBlur = 0; // Clean realistic drawing
             this.ctx.drawImage(this.sprites.fuel.img, x - w/2, y - h/2, w, h);
         } else {
             // Fallback capsule rounded rect
@@ -1184,9 +1308,9 @@ class RiverRaidGame {
             if (this.sprites.boat.loaded && this.sprites.boat.img) {
                 this.ctx.translate(x, y);
                 this.ctx.rotate(angle);
-                this.ctx.shadowColor = '#00ffcc';
-                this.ctx.shadowBlur = 10;
-                this.ctx.drawImage(this.sprites.boat.img, -w/2, -h/2, w, h);
+                this.ctx.shadowBlur = 0; // Clean realistic drawing
+                // Draw vertical image rotated, mapping height (w) and width (h)
+                this.ctx.drawImage(this.sprites.boat.img, -h/2, -w/2, h, w);
             } else {
                 // Fallback neon cyan ship
                 this.ctx.shadowColor = '#00ffcc';
@@ -1217,9 +1341,9 @@ class RiverRaidGame {
             if (this.sprites.chopper.loaded && this.sprites.chopper.img) {
                 this.ctx.translate(x, y);
                 this.ctx.rotate(angle);
-                this.ctx.shadowColor = '#ffb700';
-                this.ctx.shadowBlur = 10;
-                this.ctx.drawImage(this.sprites.chopper.img, -w/2, -h/2, w, h);
+                this.ctx.shadowBlur = 0; // Clean realistic drawing
+                // Draw vertical image rotated, mapping height (w) and width (h)
+                this.ctx.drawImage(this.sprites.chopper.img, -h/2, -w/2, h, w);
             } else {
                 // Fallback neon yellow chopper
                 this.ctx.shadowColor = '#ffb700';
@@ -1262,9 +1386,9 @@ class RiverRaidGame {
             if (this.sprites.enemyJet.loaded && this.sprites.enemyJet.img) {
                 this.ctx.translate(x, y);
                 this.ctx.rotate(angle);
-                this.ctx.shadowColor = '#ff007f';
-                this.ctx.shadowBlur = 10;
-                this.ctx.drawImage(this.sprites.enemyJet.img, -w/2, -h/2, w, h);
+                this.ctx.shadowBlur = 0; // Clean realistic drawing
+                // Draw vertical image rotated, mapping height (w) and width (h)
+                this.ctx.drawImage(this.sprites.enemyJet.img, -h/2, -w/2, h, w);
             } else {
                 // Fallback neon pink fighter plane
                 this.ctx.shadowColor = '#ff007f';

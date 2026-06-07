@@ -11,47 +11,47 @@
 
     <main class="arcade-container" id="arcadeCabinet">
         
-        <!-- Left Sideboard: Cyber-Cockpit Diagnostics -->
-        <aside class="dashboard-panel cockpit-left" aria-label="Diagnóstico do Caça">
+        <!-- Left Sideboard: Tactical MFD Flight Diagnostics -->
+        <aside class="dashboard-panel cockpit-left" aria-label="Diagnóstico de Voo">
             <div class="panel-decor-top"></div>
-            <h2 class="panel-title">HOLO-HUD V1.0</h2>
+            <h2 class="panel-title">TACTICAL MFD V2.0</h2>
             
             <div class="monitor-screen">
                 <div class="stat-box">
-                    <span class="stat-label">PONTUAÇÃO</span>
+                    <span class="stat-label">PONTUAÇÃO (SCORE)</span>
                     <div class="stat-value neon-glow-pink" id="currentScore">00000</div>
                 </div>
                 
                 <div class="stat-box">
-                    <span class="stat-label">RECORDE MAX</span>
+                    <span class="stat-label">RECORDE (HI-SCORE)</span>
                     <div class="stat-value neon-glow-cyan" id="highScore">00000</div>
                 </div>
 
                 <div class="stat-box">
-                    <span class="stat-label">SETOR ATUAL</span>
+                    <span class="stat-label">SETOR (SECTOR)</span>
                     <div class="stat-value" id="currentLevel">01</div>
                 </div>
             </div>
 
             <!-- Subsystems status panel -->
             <div class="subsystems-panel">
-                <span class="stat-label">STATUS DO CAÇA</span>
+                <span class="stat-label">SYSTEM DIAGNOSTICS</span>
                 <div class="subsystem-row">
-                    <span>PROPULSÃO</span>
+                    <span>PROPULSÃO (THRUSTER)</span>
                     <div class="hud-led active" id="propulsionLed"></div>
                 </div>
                 <div class="subsystem-row">
-                    <span>ARMAMENTO</span>
+                    <span>ARMAMENTO (WEAPONS)</span>
                     <div class="hud-led active" id="laserLed"></div>
                 </div>
                 <div class="subsystem-row">
-                    <span>ESCUDO CORE</span>
+                    <span>ESCUDO CORE (SHIELD)</span>
                     <div class="hud-led active" id="shieldLed"></div>
                 </div>
             </div>
 
             <div class="stat-box">
-                <span class="stat-label">VIDAS RESTANTES</span>
+                <span class="stat-label">CAÇAS DISPONÍVEIS (LIVES)</span>
                 <div class="lives-container" id="livesContainer" aria-live="polite">
                     <!-- SVG Lives Icons rendered by JS -->
                 </div>
@@ -59,7 +59,7 @@
 
             <!-- Fuel reactor gauge -->
             <div class="fuel-wrapper cockpit-module">
-                <span class="stat-label">REACTOR CELL (COMB.)</span>
+                <span class="stat-label">FUEL CAPACITY (COMB.)</span>
                 <div class="fuel-gauge" id="fuelGauge" aria-label="Nível de combustível">
                     <div class="fuel-fill" id="fuelFill"></div>
                     <div class="fuel-grid-overlay"></div>
@@ -70,7 +70,7 @@
                     <span>F (100%)</span>
                 </div>
                 <div class="blinking-warning" id="fuelWarning">
-                    ! EMISSÃO CRÍTICA DE COMBUSTÍVEL !
+                    ! ALERTA: NÍVEL DE COMBUSTÍVEL CRÍTICO !
                 </div>
             </div>
             <div class="panel-decor-bottom"></div>
@@ -92,12 +92,12 @@
                     <div class="perspective-grid"></div>
                 </div>
                 
-                <h1 class="overlay-title">RIVER RAID<br><span class="cyan-neon-text">NEON VOYAGE</span></h1>
+                <h1 class="overlay-title">RIVER RAID<br><span class="cyan-neon-text">TACTICAL MISSION</span></h1>
                 
                 <!-- Premium cover banner -->
                 <img src="images/game_banner.png" class="menu-banner" alt="River Raid Cover Art">
 
-                <p class="overlay-subtitle">Pilote seu caça a jato pelo rio neon, destrua defesas inimigas e reabasteça nos canais de energia!</p>
+                <p class="overlay-subtitle">Pilote seu caça de combate pelo desfiladeiro florestal, destrua alvos hostis em destaque vermelho e reabasteça nas refinarias marcadas em verde!</p>
                 
                 <button class="menu-btn neon-pulse-pink" id="startGameBtn">INICIAR OPERAÇÃO (ENTER)</button>
                 

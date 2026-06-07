@@ -3,18 +3,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap');
 
 :root {
-    --bg-color: #030009;
-    --panel-bg: rgba(12, 6, 28, 0.72);
-    --border-glow-pink: #ff007f;
-    --border-glow-cyan: #00ffcc;
-    --neon-blue: #00f3ff;
-    --neon-yellow: #ffb700;
-    --text-color: #d1c2ec;
+    --bg-color: #080c10;
+    --panel-bg: rgba(22, 26, 32, 0.88);
+    --border-glow-pink: #ff3333; /* Alert/Lock Red */
+    --border-glow-cyan: #39ff14; /* Tactical Green */
+    --neon-blue: #00e5ff; /* Auxiliary Cyan */
+    --neon-yellow: #ffb700; /* Caution Amber */
+    --text-color: #c4d7c4; /* Aviation Green Tint */
     --retro-font: 'Press Start 2P', monospace;
     --hud-font: 'Orbitron', sans-serif;
     
-    --hologram-cyan: rgba(0, 255, 204, 0.85);
-    --hologram-pink: rgba(255, 0, 127, 0.85);
+    --hologram-cyan: rgba(57, 255, 20, 0.85);
+    --hologram-pink: rgba(255, 51, 51, 0.85);
 }
 
 * {
@@ -72,10 +72,10 @@ body::before {
     background: var(--panel-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 2px solid rgba(0, 243, 255, 0.25);
+    border: 2px solid rgba(57, 255, 20, 0.25);
     box-shadow: 
-        0 0 20px rgba(0, 243, 255, 0.1), 
-        inset 0 0 25px rgba(255, 0, 127, 0.03);
+        0 0 20px rgba(57, 255, 20, 0.1), 
+        inset 0 0 25px rgba(255, 51, 51, 0.03);
     padding: 24px 20px;
     width: 270px;
     display: flex;
@@ -317,11 +317,11 @@ body::before {
 /* Game Cabinet Area styling */
 .game-cabinet {
     position: relative;
-    border: 4px solid #1a0f30;
+    border: 4px solid #202730;
     border-radius: 16px;
     box-shadow: 
-        0 0 0 4px #00f3ff,
-        0 0 35px rgba(0, 243, 255, 0.45),
+        0 0 0 4px #39ff14,
+        0 0 35px rgba(57, 255, 20, 0.4),
         0 25px 60px rgba(0, 0, 0, 0.95);
     overflow: hidden;
     background: #000;
@@ -332,7 +332,7 @@ body::before {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
     border-radius: 12px;
-    box-shadow: inset 0 0 45px rgba(0, 243, 255, 0.22);
+    box-shadow: inset 0 0 45px rgba(57, 255, 20, 0.2);
     pointer-events: none;
     z-index: 10;
 }

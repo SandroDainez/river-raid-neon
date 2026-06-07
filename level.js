@@ -24,6 +24,7 @@ class LevelGenerator {
         this.segmentsSinceLastBridge = 0;
         
         this.difficulty = 1;
+        this.scrollOffset = 0;
     }
 
     reset() {
@@ -37,6 +38,7 @@ class LevelGenerator {
         this.islandWidth = 0;
         this.segmentsSinceLastBridge = 40; // Allow some buffer at start
         this.difficulty = 1;
+        this.scrollOffset = 0;
         
         // Pre-populate screen with safe wide river segments
         const numStartSegments = Math.ceil(this.height / this.segmentHeight) + 5;
@@ -194,15 +196,26 @@ class LevelGenerator {
                     speed = 2.5 + this.difficulty * 0.5; // Fast!
                 }
 
-                // Choose motion direction
                 const dir = Math.random() < 0.5 ? -1 : 1;
+                let eWidth = 30;
+                let eHeight = 24;
+                if (enemyType === 'boat') {
+                    eWidth = 44;
+                    eHeight = 14;
+                } else if (enemyType === 'helicopter') {
+                    eWidth = 38;
+                    eHeight = 28;
+                } else if (enemyType === 'jet') {
+                    eWidth = 44;
+                    eHeight = 30;
+                }
 
                 segment.enemies.push({
                     type: enemyType,
                     x: center,
                     y: segment.y + this.segmentHeight / 2,
-                    width: enemyType === 'jet' ? 32 : 30,
-                    height: 24,
+                    width: eWidth,
+                    height: eHeight,
                     speedX: dir * speed,
                     scoreValue: scoreValue,
                     channelLeft: center - width / 2 + 15,
@@ -224,6 +237,7 @@ class LevelGenerator {
 
     // Scroll active segments downwards
     update(scrollSpeed) {
+        this.scrollOffset += scrollSpeed;
         // Move all segments down
         for (let i = 0; i < this.segments.length; i++) {
             this.segments[i].y += scrollSpeed;
@@ -263,29 +277,37 @@ class LevelGenerator {
         }
     }
 
-    // Draw the entire river bank terrain
-    draw(ctx) {
-        // Draw the main dark river background (already handled by canvas clearing, but we draw banks here)
-        ctx.fillStyle = '#060517'; // Cyber blue/black space river background
-        ctx.fillRect(0, 0, this.width, this.height);
-
-        // Grid lines inside the river (aesthetic neon grid)
-        ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
-        ctx.lineWidth = 1;
-        const gridOffset = (this.segments.length > 0) ? (this.segments[0].y % 40) : 0;
-        for (let y = gridOffset; y < this.height; y += 40) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(this.width, y);
-            ctx.stroke();
+    // Draw the entire river bank terrain with realistic textures
+    draw(ctx, forestPattern = null, waterPattern = null) {
+        // 1. Draw flowing river water background
+        if (waterPattern) {
+            const matrix = new DOMMatrix();
+            // Scroll the water texture downward based on cumulative scroll + flow speed
+            const flowOffset = (this.scrollOffset * 0.5 + Date.now() * 0.05) % 512;
+            matrix.translateSelf(0, flowOffset);
+            waterPattern.setTransform(matrix);
+            ctx.fillStyle = waterPattern;
+        } else {
+            ctx.fillStyle = '#0f2647'; // Realistic deep blue river water fallback
         }
+        ctx.fillRect(0, 0, this.width, this.height);
 
         if (this.segments.length === 0) return;
 
-        // Draw Left and Right Banks
-        ctx.fillStyle = '#17002e'; // Dark purple land
-        ctx.strokeStyle = '#ff007f'; // Neon pink border
-        ctx.lineWidth = 3;
+        // Configure forest pattern for land banks
+        if (forestPattern) {
+            const matrix = new DOMMatrix();
+            // The forest scrolls exactly with the land segments
+            const landScroll = this.scrollOffset % 512;
+            matrix.translateSelf(0, landScroll);
+            forestPattern.setTransform(matrix);
+            ctx.fillStyle = forestPattern;
+        } else {
+            ctx.fillStyle = '#1e3f20'; // Realistic dark green forest fallback
+        }
+
+        ctx.strokeStyle = '#e8cfa4'; // Sandy shoreline color
+        ctx.lineWidth = 3.5;
 
         // Draw left bank polygon
         ctx.beginPath();
@@ -298,7 +320,7 @@ class LevelGenerator {
         ctx.closePath();
         ctx.fill();
         
-        // Draw left bank stroke
+        // Draw left bank shoreline stroke
         ctx.beginPath();
         for (let i = this.segments.length - 1; i >= 0; i--) {
             if (i === this.segments.length - 1) {
@@ -309,7 +331,6 @@ class LevelGenerator {
         ctx.stroke();
 
         // Draw right bank polygon
-        ctx.fillStyle = '#17002e';
         ctx.beginPath();
         ctx.moveTo(this.width, this.height);
         for (let i = this.segments.length - 1; i >= 0; i--) {
@@ -320,7 +341,7 @@ class LevelGenerator {
         ctx.closePath();
         ctx.fill();
 
-        // Draw right bank stroke
+        // Draw right bank shoreline stroke
         ctx.beginPath();
         for (let i = this.segments.length - 1; i >= 0; i--) {
             if (i === this.segments.length - 1) {
@@ -334,16 +355,20 @@ class LevelGenerator {
         for (let i = 0; i < this.segments.length; i++) {
             const seg = this.segments[i];
             if (seg.islandActive && seg.islandWidth > 0) {
-                ctx.fillStyle = '#17002e';
-                ctx.strokeStyle = '#00ffcc'; // Neon cyan for islands
-                ctx.lineWidth = 3;
+                if (forestPattern) {
+                    ctx.fillStyle = forestPattern;
+                } else {
+                    ctx.fillStyle = '#1e3f20';
+                }
                 
                 const leftX = seg.islandCenterX - seg.islandWidth / 2;
                 const rightX = seg.islandCenterX + seg.islandWidth / 2;
 
                 ctx.fillRect(leftX, seg.y, seg.islandWidth, this.segmentHeight + 1);
                 
-                // Draw borders
+                // Draw borders (sandy shorelines)
+                ctx.strokeStyle = '#e8cfa4';
+                ctx.lineWidth = 3.5;
                 ctx.beginPath();
                 ctx.moveTo(leftX, seg.y);
                 ctx.lineTo(leftX, seg.y + this.segmentHeight + 1);
@@ -353,7 +378,7 @@ class LevelGenerator {
             }
         }
 
-        // Draw Bridges
+        // Draw Bridges (realistic steel truss design)
         for (let i = 0; i < this.segments.length; i++) {
             const seg = this.segments[i];
             if (seg.hasBridge) {
@@ -361,44 +386,61 @@ class LevelGenerator {
                 
                 if (seg.bridgeDestroyed) {
                     // Draw destroyed bridge remains on river banks
-                    ctx.fillStyle = '#555555';
-                    ctx.strokeStyle = '#ff3300';
+                    ctx.fillStyle = '#444444';
+                    ctx.strokeStyle = '#222222';
                     ctx.lineWidth = 2;
                     
-                    // Left bank scrap
+                    // Left bank remains
                     ctx.fillRect(seg.leftWallX, bridgeY - 8, 20, 16);
                     ctx.strokeRect(seg.leftWallX, bridgeY - 8, 20, 16);
 
-                    // Right bank scrap
+                    // Right bank remains
                     ctx.fillRect(seg.rightWallX - 20, bridgeY - 8, 20, 16);
                     ctx.strokeRect(seg.rightWallX - 20, bridgeY - 8, 20, 16);
+
+                    // Debris dipping into water
+                    ctx.strokeStyle = '#333333';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(seg.leftWallX + 20, bridgeY - 4);
+                    ctx.lineTo(seg.leftWallX + 30, bridgeY + 8);
+                    ctx.moveTo(seg.rightWallX - 20, bridgeY - 4);
+                    ctx.lineTo(seg.rightWallX - 30, bridgeY + 8);
+                    ctx.stroke();
                 } else {
-                    // Draw complete solid bridge (neon yellow / orange barricade)
+                    // Draw complete solid bridge (grey concrete deck + steel trusses)
                     const bridgeWidth = seg.rightWallX - seg.leftWallX;
 
-                    // Neon shadow glow
-                    ctx.shadowColor = '#ffff00';
-                    ctx.shadowBlur = 10;
+                    // Concrete support pillars on banks
+                    ctx.fillStyle = '#777777';
+                    ctx.fillRect(seg.leftWallX - 8, bridgeY - 12, 16, 24);
+                    ctx.fillRect(seg.rightWallX - 8, bridgeY - 12, 16, 24);
                     
-                    ctx.fillStyle = '#ffb700'; // Retro orange bridge structure
-                    ctx.fillRect(seg.leftWallX, bridgeY - 10, bridgeWidth, 20);
+                    // Road deck
+                    ctx.fillStyle = '#3a3a3a';
+                    ctx.fillRect(seg.leftWallX, bridgeY - 8, bridgeWidth, 16);
 
-                    ctx.strokeStyle = '#ffff00'; // Glowing yellow highlights
+                    // Steel trusses
+                    ctx.strokeStyle = '#888888';
                     ctx.lineWidth = 3;
-                    ctx.strokeRect(seg.leftWallX, bridgeY - 10, bridgeWidth, 20);
-
-                    // Caution stripes pattern
-                    ctx.strokeStyle = '#000000';
-                    ctx.lineWidth = 4;
                     ctx.beginPath();
-                    for (let bx = seg.leftWallX + 10; bx < seg.rightWallX; bx += 30) {
-                        ctx.moveTo(bx, bridgeY - 10);
-                        ctx.lineTo(bx + 15, bridgeY + 10);
+                    ctx.moveTo(seg.leftWallX, bridgeY - 8);
+                    ctx.lineTo(seg.rightWallX, bridgeY - 8);
+                    ctx.moveTo(seg.leftWallX, bridgeY + 8);
+                    ctx.lineTo(seg.rightWallX, bridgeY + 8);
+                    ctx.stroke();
+
+                    // Criss-cross steel beam pattern
+                    ctx.strokeStyle = '#555555';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    for (let bx = seg.leftWallX + 15; bx < seg.rightWallX - 10; bx += 25) {
+                        ctx.moveTo(bx, bridgeY - 8);
+                        ctx.lineTo(bx + 15, bridgeY + 8);
+                        ctx.moveTo(bx + 15, bridgeY - 8);
+                        ctx.lineTo(bx, bridgeY + 8);
                     }
                     ctx.stroke();
-                    
-                    // Reset shadow glow
-                    ctx.shadowBlur = 0;
                 }
             }
         }
