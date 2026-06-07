@@ -11,11 +11,19 @@ class RetroAudio {
     }
 
     init() {
-        if (this.ctx) return;
+        if (this.ctx) {
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+            return;
+        }
         // Create audio context on user gesture
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (AudioContextClass) {
             this.ctx = new AudioContextClass();
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
         }
     }
 

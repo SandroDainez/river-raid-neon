@@ -141,9 +141,10 @@ class RiverRaidGame {
 
     loadSettings() {
         // Mute state
-        const savedMute = localStorage.getItem('riverRaid_muted') === 'true';
-        document.getElementById('muteToggle').checked = savedMute;
-        if (savedMute) this.sound.muted = true;
+        const savedMuted = localStorage.getItem('riverRaid_muted') === 'true';
+        // Checked means sounds are ACTIVE (not muted)
+        document.getElementById('muteToggle').checked = !savedMuted;
+        this.sound.muted = savedMuted;
 
         // CRT State
         const savedCrt = localStorage.getItem('riverRaid_crt') !== 'false';
@@ -243,8 +244,12 @@ class RiverRaidGame {
 
         // Mute Toggle change
         document.getElementById('muteToggle').addEventListener('change', (e) => {
-            const isMuted = this.sound.toggleMute();
-            localStorage.setItem('riverRaid_muted', isMuted);
+            const isMuted = !e.target.checked;
+            this.sound.muted = isMuted;
+            if (isMuted) {
+                this.sound.stopLowFuelWarning();
+            }
+            localStorage.setItem('riverRaid_muted', isMuted ? 'true' : 'false');
         });
 
         // CRT Toggle change
