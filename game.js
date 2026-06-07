@@ -45,8 +45,8 @@ class RiverRaidGame {
         this.player = {
             x: this.width / 2,
             y: this.height - 150,
-            width: 30,
-            height: 34,
+            width: 48,
+            height: 54,
             speedX: 5,
             targetX: this.width / 2, // for mouse/touch steering
             fuel: 100,

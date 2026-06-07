@@ -163,16 +163,16 @@ class LevelGenerator {
 
         // Function to place an entity in a channel
         const spawnInChannel = (center, width, isRightChannel) => {
-            if (width < 60) return; // Channel too narrow to fit obstacles
+            if (width < 90) return; // Channel too narrow to fit obstacles
             
             const roll = Math.random();
             if (roll < fuelChance) {
                 // Spawn Fuel Depot
                 segment.fuelDepots.push({
-                    x: center + (Math.random() - 0.5) * (width - 40),
+                    x: center + (Math.random() - 0.5) * (width - 60),
                     y: segment.y + this.segmentHeight / 2,
-                    width: 30,
-                    height: 30,
+                    width: 48,
+                    height: 48,
                     fuelAmount: 100
                 });
             } else if (roll < fuelChance + spawnChance) {
@@ -200,14 +200,14 @@ class LevelGenerator {
                 let eWidth = 30;
                 let eHeight = 24;
                 if (enemyType === 'boat') {
-                    eWidth = 44;
-                    eHeight = 14;
+                    eWidth = 70;
+                    eHeight = 22;
                 } else if (enemyType === 'helicopter') {
-                    eWidth = 38;
-                    eHeight = 28;
+                    eWidth = 60;
+                    eHeight = 45;
                 } else if (enemyType === 'jet') {
-                    eWidth = 44;
-                    eHeight = 30;
+                    eWidth = 70;
+                    eHeight = 48;
                 }
 
                 segment.enemies.push({
