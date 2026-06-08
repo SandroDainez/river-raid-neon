@@ -18,7 +18,7 @@ const safeStorage = {
         }
     }
 };
-const localStorage = safeStorage;
+const safeLocalStorage = safeStorage;
 
 class RiverRaidGame {
     constructor() {
@@ -159,24 +159,24 @@ class RiverRaidGame {
 
     loadSettings() {
         // Mute state
-        const savedMuted = localStorage.getItem('riverRaid_muted') === 'true';
+        const savedMuted = safeLocalStorage.getItem('riverRaid_muted') === 'true';
         // Checked means sounds are ACTIVE (not muted)
         document.getElementById('muteToggle').checked = !savedMuted;
         this.sound.muted = savedMuted;
 
         // CRT State
-        const savedCrt = localStorage.getItem('riverRaid_crt') !== 'false';
+        const savedCrt = safeLocalStorage.getItem('riverRaid_crt') !== 'false';
         document.getElementById('crtToggle').checked = savedCrt;
         if (!savedCrt) {
             document.getElementById('arcadeCabinet').classList.add('crt-off');
         }
         
         // Difficulty
-        const savedDiff = localStorage.getItem('riverRaid_difficulty') || '1';
+        const savedDiff = safeLocalStorage.getItem('riverRaid_difficulty') || '1';
         this.updateDifficultySelection(savedDiff);
 
         // High Score
-        this.highScore = parseInt(localStorage.getItem('riverRaid_highScore')) || 0;
+        this.highScore = parseInt(safeLocalStorage.getItem('riverRaid_highScore')) || 0;
         document.getElementById('highScore').textContent = this.formatScore(this.highScore);
     }
 
@@ -189,7 +189,7 @@ class RiverRaidGame {
                 btn.classList.remove('active');
             }
         });
-        localStorage.setItem('riverRaid_difficulty', val);
+        safeLocalStorage.setItem('riverRaid_difficulty', val);
         this.levelGen.setDifficulty(parseInt(val));
     }
 
@@ -245,6 +245,32 @@ class RiverRaidGame {
             this.shoot();
         });
 
+        // Touch Steering & Speed control on Canvas
+        const handleCanvasTouch = (e) => {
+            if (this.state !== 'PLAYING' && this.state !== 'RESPAWNING') return;
+            if (e.cancelable) e.preventDefault(); // Prevent default mobile zooming/scrolling while playing
+            if (e.touches.length > 0) {
+                const rect = this.canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                const mouseX = touch.clientX - rect.left - (this.player.width / 2);
+                const mouseY = touch.clientY - rect.top;
+                
+                this.player.targetX = Math.max(30, Math.min(this.width - 30, mouseX + this.player.width/2));
+                this.mouseX = mouseX + this.player.width/2;
+                this.mouseY = mouseY;
+                this.mouseActive = true;
+            }
+        };
+
+        this.canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
+        this.canvas.addEventListener('touchmove', handleCanvasTouch, { passive: false });
+        this.canvas.addEventListener('touchend', () => {
+            this.mouseActive = false;
+        });
+        this.canvas.addEventListener('touchcancel', () => {
+            this.mouseActive = false;
+        });
+
         // Start button click
         document.getElementById('startGameBtn').addEventListener('click', () => {
             this.startGame();
@@ -281,7 +307,7 @@ class RiverRaidGame {
             if (isMuted) {
                 this.sound.stopLowFuelWarning();
             }
-            localStorage.setItem('riverRaid_muted', isMuted ? 'true' : 'false');
+            safeLocalStorage.setItem('riverRaid_muted', isMuted ? 'true' : 'false');
         });
 
         // CRT Toggle change
@@ -289,10 +315,10 @@ class RiverRaidGame {
             const cabinet = document.getElementById('arcadeCabinet');
             if (e.target.checked) {
                 cabinet.classList.remove('crt-off');
-                localStorage.setItem('riverRaid_crt', 'true');
+                safeLocalStorage.setItem('riverRaid_crt', 'true');
             } else {
                 cabinet.classList.add('crt-off');
-                localStorage.setItem('riverRaid_crt', 'false');
+                safeLocalStorage.setItem('riverRaid_crt', 'false');
             }
         });
 
@@ -313,26 +339,30 @@ class RiverRaidGame {
         const rightBtn = document.getElementById('touchRight');
         const shootBtn = document.getElementById('touchShoot');
 
-        let leftInterval, rightInterval;
-
         leftBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.keys['ArrowLeft'] = true;
         });
         leftBtn.addEventListener('touchend', () => {
             this.keys['ArrowLeft'] = false;
         });
+        leftBtn.addEventListener('touchcancel', () => {
+            this.keys['ArrowLeft'] = false;
+        });
 
         rightBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.keys['ArrowRight'] = true;
         });
         rightBtn.addEventListener('touchend', () => {
             this.keys['ArrowRight'] = false;
         });
+        rightBtn.addEventListener('touchcancel', () => {
+            this.keys['ArrowRight'] = false;
+        });
 
         shootBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.shoot();
         });
     }
@@ -361,7 +391,7 @@ class RiverRaidGame {
         this.victoryTriggered = false;
         
         // Set difficulty variables
-        const difficulty = parseInt(localStorage.getItem('riverRaid_difficulty') || '1');
+        const difficulty = parseInt(safeLocalStorage.getItem('riverRaid_difficulty') || '1');
         
         let startingLives = 4;
         let baseFuelBurnRate = 0.04;
@@ -455,7 +485,7 @@ class RiverRaidGame {
         // Update high score text
         if (this.score > this.highScore) {
             this.highScore = this.score;
-            localStorage.setItem('riverRaid_highScore', this.highScore);
+            safeLocalStorage.setItem('riverRaid_highScore', this.highScore);
             document.getElementById('highScore').textContent = this.formatScore(this.highScore);
         }
     }
@@ -1149,7 +1179,7 @@ class RiverRaidGame {
         this.levelGen.setSector(this.level);
         
         // Increase difficulty
-        const difficulty = parseInt(localStorage.getItem('riverRaid_difficulty') || '1');
+        const difficulty = parseInt(safeLocalStorage.getItem('riverRaid_difficulty') || '1');
         this.levelGen.setDifficulty(difficulty + this.level - 1);
         
         this.baseScrollSpeed = 2 + difficulty * 0.5 + this.level * 0.3;
@@ -1949,7 +1979,7 @@ class RiverRaidGame {
 
     // High Scores list operations
     loadHighScores() {
-        const scores = localStorage.getItem('riverRaid_highScores');
+        const scores = safeLocalStorage.getItem('riverRaid_highScores');
         if (scores) {
             this.highScoresList = JSON.parse(scores);
         } else {
@@ -1965,7 +1995,7 @@ class RiverRaidGame {
     }
 
     saveLeaderboard() {
-        localStorage.setItem('riverRaid_highScores', JSON.stringify(this.highScoresList));
+        safeLocalStorage.setItem('riverRaid_highScores', JSON.stringify(this.highScoresList));
     }
 
     checkIsNewHighScore() {
@@ -2082,7 +2112,7 @@ class RiverRaidGame {
         
         if (this.score > this.highScore) {
             this.highScore = this.score;
-            localStorage.setItem('riverRaid_highScore', this.highScore);
+            safeLocalStorage.setItem('riverRaid_highScore', this.highScore);
             document.getElementById('highScore').textContent = this.formatScore(this.highScore);
         }
     }
